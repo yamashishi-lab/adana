@@ -97,7 +97,7 @@ REASON_CLOSINGS = [
 ]
 
 # ==============================================================================
-# 過失深刻度ランク（SSSは0.01%の天文学的激低確率）
+# 過失深刻度ランク（SSSは0.01%の天文学的確率）
 # ==============================================================================
 RANKS_WEIGHTED = [
     ("【級外】微小な赤恥 (Rank D)", 45.0),
@@ -106,7 +106,7 @@ RANKS_WEIGHTED = [
     ("【重過失】人間関係亀裂 (Rank A)", 7.5),
     ("【特級過失】懲戒免職・絶縁級 (Rank S)", 1.4),
     ("【極刑過失】人生再起動推奨 (Rank SS)", 0.09),
-    ("【世界遺産級・破滅】永久封印の呪物 (Rank SSS)", 0.01)  # 1万分の1の超プレミア
+    ("【世界遺産級・破滅】永久封印の呪物 (Rank SSS)", 0.01)
 ]
 
 def generate_nickname_data(name, failure):
@@ -115,15 +115,12 @@ def generate_nickname_data(name, failure):
     hex_digest = hash_obj.hexdigest()
     rng = random.Random(int(hex_digest[:8], 16))
 
-    # 1,024 × 1,024 = 1,048,576通りの二つ名生成
     prefix = f"{rng.choice(P_ATTR)}{rng.choice(P_MOD)}"
     core = f"{rng.choice(C_DOMAIN)}{rng.choice(C_ROLE)}"
     nickname = f"“{prefix}の{core}”"
 
-    # 10 × 10 × 10 = 1,000通りのブラックジョーク生成
     reason = f"{rng.choice(REASON_OPENINGS)}{rng.choice(REASON_BODIES)}{rng.choice(REASON_CLOSINGS)}"
 
-    # 超激低SSS判定
     rank_choices, weights = zip(*RANKS_WEIGHTED)
     rank = rng.choices(rank_choices, weights=weights, k=1)[0]
 
@@ -141,7 +138,7 @@ def create_certificate_image(name, failure, nickname, rank, reason, serial_no, a
             return ImageFont.truetype(FONT_PATH, size)
         return ImageFont.load_default()
 
-    # 1. 外枠フレーム（金枠・アンティーク調）
+    # 1. 外枠フレーム
     draw.rectangle([(25, 25), (width - 25, height - 25)], outline="#C5A059", width=5)
     draw.rectangle([(38, 38), (width - 38, height - 38)], outline="#4A3B22", width=2)
     draw.rectangle([(44, 44), (width - 44, height - 44)], outline="#8C6D37", width=1)
@@ -179,7 +176,7 @@ def create_certificate_image(name, failure, nickname, rank, reason, serial_no, a
         nick_font = get_font(nick_size)
     draw.text((width // 2, 430), nickname, fill="#FFDD44", font=nick_font, anchor="mm")
 
-    # 6. 過失の概要（最大3行で省略＆はみ出し防止）
+    # 6. 過失の概要
     draw.text((100, 530), "【 認定対象事由（過失記録） 】", fill="#E5C158", font=get_font(25))
 
     clean_failure = failure.replace("\n", " ").strip()
@@ -191,14 +188,14 @@ def create_certificate_image(name, failure, nickname, rank, reason, serial_no, a
     disp_failure = "\n".join(failure_lines)
     draw.text((105, 575), f"「{disp_failure}」", fill="#EAEAEA", font=get_font(27), spacing=10)
 
-    # 7. 認定理由（自動折り返し）
+    # 7. 認定理由
     draw.text((100, 715), "【 認定および授与の辞 】", fill="#E5C158", font=get_font(25))
     wrapped_reason = textwrap.fill(reason, width=31)
     draw.text((105, 760), wrapped_reason, fill="#A6A6BA", font=get_font(24), spacing=10)
 
     # 8. ランク表示
     if "SSS" in rank:
-        rank_color = "#FF0055"  # SSS専用カラー
+        rank_color = "#FF0055"
     elif "SS" in rank or "Rank S" in rank:
         rank_color = "#FF8800"
     else:
@@ -207,7 +204,7 @@ def create_certificate_image(name, failure, nickname, rank, reason, serial_no, a
     draw.text((100, 995), f"過失深刻度ランク ： {rank}", fill=rank_color, font=get_font(27))
     draw.text((100, 1045), f"公 式 認 定 日   ： {datetime.now().strftime('%Y年%m月%d日')}", fill="#888899", font=get_font(22))
 
-    # 9. 公式角印（重厚な二重朱印・中心配置）
+    # 9. 公式角印（エラーが起きていた箇所を完全修復）
     stamp_x, stamp_y = width - 275, 960
     stamp_w = 175
 
@@ -222,4 +219,62 @@ def create_certificate_image(name, failure, nickname, rank, reason, serial_no, a
     draw.text((stamp_x + 48, stamp_y + 48), "黒", fill="#E83030", font=stamp_font, anchor="mm")
     draw.text((stamp_x + 127, stamp_y + 48), "歴", fill="#E83030", font=stamp_font, anchor="mm")
     draw.text((stamp_x + 48, stamp_y + 127), "院", fill="#E83030", font=stamp_font, anchor="mm")
-    draw.text((stamp_x + 127, stamp_y + 127), "印", fill="#E
+    draw.text((stamp_x + 127, stamp_y + 127), "印", fill="#E83030", font=stamp_font, anchor="mm")
+
+    # 10. フッター
+    draw.line([(80, height - 120), (width - 80, height - 120)], fill="#3B3B4C", width=1)
+    draw.text((90, height - 85), f"SERIAL: {serial_no} (OFFICIALLY RECORDED)", fill="#E5C158", font=get_font(21))
+    draw.text((width - 90, height - 85), f"ARCHIVE: {app_url}", fill="#757588", font=get_font(20), anchor="ra")
+
+    return img
+
+# --- Streamlit フロントエンド ---
+st.title("🎖️ 公式・黒歴史二つ名認定院")
+st.caption("消し去りたい過去のやらかしを、墓場まで背負う『公認二つ名』に昇華します。")
+
+with st.form("cert_form"):
+    user_name = st.text_input("あなたの名前（またはハンドルネーム）", value="たけし")
+    user_failure = st.text_area(
+        "過去にやらかした最大の失敗・黒歴史", 
+        placeholder="例: 全社員の前で行うプレゼンで画面共有したまま怪しい検索履歴を晒した\n例: 酔っ払って元カノ全員に深夜3時に「元気？」と一斉送信した"
+    )
+    submitted = st.form_submit_button("🔥 公式認定証を発行する", type="primary", use_container_width=True)
+
+if submitted:
+    if not user_failure.strip():
+        st.error("やらかした失敗を入力してください。")
+    else:
+        nickname, rank, reason, serial_no = generate_nickname_data(user_name, user_failure)
+
+        with st.spinner("厳正なる審査を行い、公認印を押印中..."):
+            cert_img = create_certificate_image(user_name, user_failure, nickname, rank, reason, serial_no)
+
+            buf = io.BytesIO()
+            cert_img.save(buf, format="PNG", quality=95)
+            byte_im = buf.getvalue()
+
+        if "SSS" in rank:
+            st.balloons()
+            st.error("⚠️【警告】0.01%の天文学的確率で『世界遺産級・破滅 (Rank SSS)』を引き当ててしまいました。")
+        else:
+            st.success("✅ 厳正なる審査の結果、不名誉な終身二つ名が認定されました！")
+
+        st.image(byte_im, caption="公式発行・偽造防止暗号化済み認定証", use_container_width=True)
+
+        st.download_button(
+            label="📥 認定証画像を保存してSNSに晒す (PNG)",
+            data=byte_im,
+            file_name=f"certificate_{serial_no}.png",
+            mime="image/png",
+            use_container_width=True
+        )
+
+        share_text = f"【悲報】過去のやらかしにより、公式二つ名が決定しました。\n\n二つ名：{nickname}\n深刻度：{rank}\n証拠シリアル：{serial_no}\n\n#黒歴史二つ名認定院"
+        x_url = f"https://twitter.com/intent/tweet?text={requests.utils.quote(share_text)}"
+        st.markdown(f'''
+        <a href="{x_url}" target="_blank" style="text-decoration: none;">
+            <div style="background-color: #000; color: #fff; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; border: 1px solid #333; margin-top: 10px;">
+                𝕏 (Twitter) でこの不名誉を告発する
+            </div>
+        </a>
+        ''', unsafe_allow_html=True)
