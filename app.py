@@ -5,6 +5,7 @@ import os
 import requests
 import hashlib
 import random
+import textwrap
 from datetime import datetime
 
 st.set_page_config(
@@ -24,146 +25,201 @@ if not os.path.exists(FONT_PATH):
     except Exception:
         FONT_PATH = None
 
-# --- あだ名生成の語彙バンク ---
-PREFIX_LIST = [
-    "歩く", "前代未聞の", "救いようのない", "時空を歪める", "全米が呆れた",
-    "背水の陣を敷く", "不可逆の", "神に見放されし", "国宝級の", "暴走機関車"
+# ==============================================================================
+# 語彙合成エンジン（各1,024通り ＝ 掛け合わせ100万通り超の被りなし二つ名）
+# ==============================================================================
+P_ATTR = [
+    "歩く", "秒速の", "天然物の", "救いなき", "不可逆の", "全米絶句の", "世紀末の", "お粗末な",
+    "時限式", "低燃費の", "人間国宝級", "恥の上塗り", "無自覚な", "泥舟の", "四面楚歌の", "背水の陣の",
+    "致命的な", "見切り発車", "炎上確定の", "言い訳番長", "骨折り損の", "自爆覚悟の", "後戻り不能", "前途多難な",
+    "墓穴掘りの", "自業自得の", "哀愁漂う", "ノーガード", "豆腐メンタルの", "神風特攻の", "問答無用の", "突貫工事の"
 ]
-CORE_LIST = [
-    "やらかし王", "自爆テロリスト", "免罪体質", "言い訳マイスター", "黒歴史量産機",
-    "爆死職人", "逆転サヨナラ負け男", "フラグ回収神", "ドタキャン怪獣", "負債の錬金術師"
+P_MOD = [
+    "完全敗北", "全自動", "脳死状態", "深夜テンション", "空回り", "逆走", "ノーブレーキ", "暴走",
+    "勘違い", "迷走", "空前絶後", "後悔先立ち", "メンタル崩壊", "情緒不安定", "自暴自棄", "焼け野原",
+    "大炎上", "被害妄想", "見苦しい", "往生際悪い", "取り返しのつかない", "絶体絶命", "自作自演", "泥沼化",
+    "赤面", "青息吐息", "八方塞がり", "不祥事", "失態続きの", "やっつけ", "やらかし確定", "前代未聞"
 ]
-RANK_LIST = ["国宝級やらかし (SSS)", "特級過失 (SS)", "懲戒免職級 (S)", "赤恥レベル (A)"]
+
+C_DOMAIN = [
+    "地雷", "時限爆弾", "戦犯", "自爆", "黒歴史", "言い訳", "燃料投下", "赤っ恥",
+    "墓穴", "破滅", "怪文書", "散財", "逆境", "ドタキャン", "誤爆", "大惨事",
+    "負債", "逃亡", "恥晒し", "空回り", "お笑い草", "お調子者", "黒星", "全ロス",
+    "ピエロ", "破綻", "迷惑", "トラブル", "撃沈", "失言", "トラウマ", "不祥事"
+]
+C_ROLE = [
+    "神", "王", "マイスター", "職人", "魔人", "製造機", "モンスター", "クリエイター",
+    "キング", "エージェント", "ソムリエ", "テロリスト", "ドクター", "プロデューサー", "プリンス", "アーティスト",
+    "コレクター", "パフォーマー", "エンジニア", "コンサルタント", "スペシャリスト", "指揮官", "伝道師", "エリート",
+    "カリスマ", "請負人", "第一人者", "パイオニア", "総帥", "権化", "マスター", "巨匠"
+]
+
+# ==============================================================================
+# ブラックジョーク・皮肉 1,000通り生成エンジン（10 × 10 × 10）
+# ==============================================================================
+REASON_OPENINGS = [
+    "貴殿がやらかした上記の大失態は、人類の愚かさの極致を鮮やかに体現しており、",
+    "常人には到底真似できない絶妙なタイミングで自爆を遂げたその蛮勇は、まさに天災であり、",
+    "冷静な思考を完全に放棄し、本能の赴くままに引き起こされた芸術的惨劇は、",
+    "何一つ言い訳の余地が残されていない純度100％の自滅劇であり、",
+    "世間が凍りつき、味方すら全員が静かに距離を置いたあの歴史的失態は、",
+    "理性より先にちっぽけなプライドが木っ端微塵に粉砕されたあの刹那は、",
+    "もし恥ずかしさで人間が核分裂を起こすなら、地球を3回消滅させていた規模であり、",
+    "知能と危機管理能力の完全な欠如を、これ以上ない明快さで証明したその功績は、",
+    "目撃した全員が『見なかったことにしてやろう』と憐れみの目を向けたあの惨状は、",
+    "後悔と羞恥心で深夜にベッドの上で奇声を上げのたうち回るに相応しいあの凶行は、"
+]
+
+REASON_BODIES = [
+    "関わったすべての人間に深い溜め息と、一生酒の肴にできる特大の失笑を提供しました。",
+    "どれほど高い授業料を払っても決して取り返せない信頼と尊厳を、一瞬で消滅させました。",
+    "歴史の教科書に『反面教師の最高傑作』としてフルネームで掲載すべきレベルに達しています。",
+    "周囲を震撼させ、その場の空気を絶対零度まで急冷却する驚異的な破壊力を誇りました。",
+    "『記憶を消す装置』が実用化された暁には、最初の被験者として真っ先に推薦されるべき偉業です。",
+    "救いようのない哀愁と、誰の共感も得られない孤立無援の地獄を生み出しました。",
+    "貴殿の人生のハイライトが『これ』で確定してしまったという残酷な現実を突きつけています。",
+    "神ですら匙を投げてその場から立ち去るレベルの、非の打ち所がないパーフェクトな自爆でした。",
+    "どれだけ美談に仕立て上げようとしても、下水のような悪臭を放つ恥辱のモニュメントです。",
+    "関わった友人知人の連絡先から、貴殿の名前が静かに削除される決定打となりました。"
+]
+
+REASON_CLOSINGS = [
+    "記憶から消したいと願う浅はかな祈りを即座に却下し、ここに終身二つ名として永遠に刻印します。",
+    "その栄誉ある恥辱を讃え、墓場まで背負うべき呪いとして当院公式の永久ブラックリストに登録します。",
+    "二度と元の平穏な日常には戻れない証として、この不名誉極まりない称号を謹んで贈呈いたします。",
+    "貴殿がこの先どれほど徳を積もうとも帳消しにはならない汚点として、厳正に認定証を交付します。",
+    "来世まで語り継がれるべき人類の汚点として、当院公認の烙印をその魂に深く刻み込みます。",
+    "せめてもの慈悲として、この認定証を見るたびに己の愚かさを猛省することを義務付けます。",
+    "死ぬ間際の走馬灯で真っ先に高画質再生されるよう、公式アーカイブに永久保存いたします。",
+    "この称号が貴殿の余生に相応しい重荷となり続けることを、審査員一同心より確信しております。",
+    "もはや失うものなど何一つない無敵のピエロとして、堂々と胸を張って泥道を歩んでください。",
+    "この恥辱を忘れかけた頃に再び悪夢として蘇るよう、呪詛を込めてここに公認認定証を発行します。"
+]
+
+# ==============================================================================
+# 過失深刻度ランク（SSSは0.01%の天文学的激低確率）
+# ==============================================================================
+RANKS_WEIGHTED = [
+    ("【級外】微小な赤恥 (Rank D)", 45.0),
+    ("【軽過失】日常的失態 (Rank C)", 30.0),
+    ("【中過失】赤面トラウマ (Rank B)", 16.0),
+    ("【重過失】人間関係亀裂 (Rank A)", 7.5),
+    ("【特級過失】懲戒免職・絶縁級 (Rank S)", 1.4),
+    ("【極刑過失】人生再起動推奨 (Rank SS)", 0.09),
+    ("【世界遺産級・破滅】永久封印の呪物 (Rank SSS)", 0.01)  # 1万分の1の超プレミア
+]
 
 def generate_nickname_data(name, failure):
-    # 名前と失敗から固有シードを生成（同じ入力には同じ結果）
-    seed_str = f"{name}_{failure}"
+    seed_str = f"{name.strip()}_{failure.strip()}"
     hash_obj = hashlib.sha256(seed_str.encode("utf-8"))
     hex_digest = hash_obj.hexdigest()
     rng = random.Random(int(hex_digest[:8], 16))
 
-    nickname = f"“{rng.choice(PREFIX_LIST)}{rng.choice(CORE_LIST)}”"
-    rank = rng.choice(RANK_LIST)
+    # 1,024 × 1,024 = 1,048,576通りの二つ名生成
+    prefix = f"{rng.choice(P_ATTR)}{rng.choice(P_MOD)}"
+    core = f"{rng.choice(C_DOMAIN)}{rng.choice(C_ROLE)}"
+    nickname = f"“{prefix}の{core}”"
+
+    # 10 × 10 × 10 = 1,000通りのブラックジョーク生成
+    reason = f"{rng.choice(REASON_OPENINGS)}{rng.choice(REASON_BODIES)}{rng.choice(REASON_CLOSINGS)}"
+
+    # 超激低SSS判定
+    rank_choices, weights = zip(*RANKS_WEIGHTED)
+    rank = rng.choices(rank_choices, weights=weights, k=1)[0]
+
     serial_no = f"REG-{hex_digest[:4].upper()}-{hex_digest[4:8].upper()}-{hex_digest[8:12].upper()}"
-    return nickname, rank, serial_no
+    return nickname, rank, reason, serial_no
 
 # --- 認定証画像レンダリング（Pillow） ---
-def create_certificate_image(name, failure, nickname, rank, serial_no, app_url="https://regret-court.streamlit.app"):
-    width, height = 1080, 1350  # SNS（X/Instagram）に最適な縦長高解像度
-    img = Image.new("RGB", (width, height), color="#121218")
+def create_certificate_image(name, failure, nickname, rank, reason, serial_no, app_url="https://regret-court.streamlit.app"):
+    width, height = 1080, 1440
+    img = Image.new("RGB", (width, height), color="#0F0F14")
     draw = ImageDraw.Draw(img)
 
-    # 1. 豪華な二重フレーム（金枠）
-    draw.rectangle([(30, 30), (width - 30, height - 30)], outline="#D4AF37", width=6)
-    draw.rectangle([(45, 45), (width - 45, height - 45)], outline="#554411", width=2)
-
-    # フォントロード（フォント取得失敗時はデフォルト）
     def get_font(size):
         if FONT_PATH and os.path.exists(FONT_PATH):
             return ImageFont.truetype(FONT_PATH, size)
         return ImageFont.load_default()
 
-    font_title = get_font(54)
-    font_sub = get_font(26)
-    font_name = get_font(44)
-    font_nick = get_font(58)
-    font_body = get_font(30)
-    font_meta = get_font(22)
+    # 1. 外枠フレーム（金枠・アンティーク調）
+    draw.rectangle([(25, 25), (width - 25, height - 25)], outline="#C5A059", width=5)
+    draw.rectangle([(38, 38), (width - 38, height - 38)], outline="#4A3B22", width=2)
+    draw.rectangle([(44, 44), (width - 44, height - 44)], outline="#8C6D37", width=1)
 
-    # 2. パクリ防止：中央透かし文字（ウォーターマーク）
-    draw.text((width // 2, height // 2 - 50), "OFFICIAL CERTIFICATE", fill="#1a1a26", font=get_font(72), anchor="mm")
+    corner_size = 28
+    corners = [(44, 44), (width - 44 - corner_size, 44), (44, height - 44 - corner_size), (width - 44 - corner_size, height - 44 - corner_size)]
+    for cx, cy in corners:
+        draw.rectangle([(cx, cy), (cx + corner_size, cy + corner_size)], fill="#C5A059")
+
+    # 2. 中央透かし
+    draw.text((width // 2, height // 2 - 20), "OFFICIAL CERTIFICATE", fill="#171722", font=get_font(68), anchor="mm")
 
     # 3. ヘッダー
-    draw.text((width // 2, 120), "全 国 黒 歴 史 認 定 院", fill="#D4AF37", font=font_title, anchor="mm")
-    draw.text((width // 2, 180), "OFFICIAL REGRET ALIAS REGISTRATION", fill="#888899", font=font_sub, anchor="mm")
-    draw.line([(150, 220), (width - 150, 220)], fill="#D4AF37", width=2)
+    draw.text((width // 2, 115), "全 国 黒 歴 史 認 定 院", fill="#E5C158", font=get_font(52), anchor="mm")
+    draw.text((width // 2, 175), "NATIONAL REGRET & ATROCITY ARCHIVE", fill="#8A8A9E", font=get_font(24), anchor="mm")
+    draw.line([(140, 210), (width - 140, 210)], fill="#C5A059", width=2)
 
-    # 4. 対象者・認定二つ名
-    draw.text((width // 2, 300), f"被 認 定 者 ： {name} 殿", fill="#FFFFFF", font=font_name, anchor="mm")
-    
-    draw.rectangle([(100, 370), (width - 100, 520)], fill="#1E1E2A", outline="#FF3366", width=3)
-    draw.text((width // 2, 410), "【 授 与 さ れ し 終 身 二 つ 名 】", fill="#FF3366", font=font_sub, anchor="mm")
-    draw.text((width // 2, 465), nickname, fill="#FFDD44", font=font_nick, anchor="mm")
+    # 4. 被認定者名（枠内に収まるよう自動縮小）
+    name_str = f"被 認 定 者 ： {name} 殿"
+    name_size = 42
+    name_font = get_font(name_size)
+    while name_size > 22 and name_font.getlength(name_str) > (width - 200):
+        name_size -= 2
+        name_font = get_font(name_size)
+    draw.text((width // 2, 275), name_str, fill="#FFFFFF", font=name_font, anchor="mm")
 
-    # 5. 犯した過ち（本文）
-    draw.text((120, 580), "【 認定根拠となる過去の過失 】", fill="#D4AF37", font=font_sub)
-    
-    # 複数行の折り返し表示
-    failure_disp = f"「{failure}」"
-    if len(failure_disp) > 26:
-        failure_disp = failure_disp[:26] + "\n" + failure_disp[26:50] + ("..." if len(failure) > 48 else "")
-    draw.text((120, 630), failure_disp, fill="#E0E0E0", font=font_body, spacing=12)
+    # 5. 終身二つ名枠（文字数に応じて自動縮小）
+    draw.rectangle([(90, 335), (width - 90, 485)], fill="#181824", outline="#FF2A55", width=3)
+    draw.text((width // 2, 370), "【 授 与 さ れ し 終 身 二 つ 名 】", fill="#FF2A55", font=get_font(24), anchor="mm")
 
-    reason_text = (
-        "貴殿が過去に犯した上記の大失態は、人類の愚かさを極限まで体現し、\n"
-        "周囲に深い戦慄と特大の失笑をもたらしました。\n"
-        "その栄誉ある恥辱を永遠に称え、当院公認の二つ名としてここに刻みます。"
-    )
-    draw.text((120, 770), reason_text, fill="#AAAAAA", font=font_body, spacing=12)
+    nick_size = 54
+    nick_font = get_font(nick_size)
+    while nick_size > 24 and nick_font.getlength(nickname) > (width - 240):
+        nick_size -= 2
+        nick_font = get_font(nick_size)
+    draw.text((width // 2, 430), nickname, fill="#FFDD44", font=nick_font, anchor="mm")
 
-    # 6. スペック・ランク
-    draw.text((120, 960), f"過失深刻度ランク ： {rank}", fill="#00FFCC", font=font_body)
-    draw.text((120, 1010), f"認 定 日 時      ： {datetime.now().strftime('%Y年%m月%d日')}", fill="#888899", font=font_meta)
+    # 6. 過失の概要（最大3行で省略＆はみ出し防止）
+    draw.text((100, 530), "【 認定対象事由（過失記録） 】", fill="#E5C158", font=get_font(25))
 
-    # 7. パクリ防止：公認朱印（デジタル角印）
-    stamp_x, stamp_y = width - 260, height - 360
-    draw.rectangle([(stamp_x, stamp_y), (stamp_x + 150, stamp_y + 150)], outline="#DD2222", width=5)
-    draw.text((stamp_x + 75, stamp_y + 45), "公式\n認証", fill="#DD2222", font=get_font(42), anchor="mm", spacing=6)
+    clean_failure = failure.replace("\n", " ").strip()
+    wrapped_failure = textwrap.fill(clean_failure, width=28)
+    failure_lines = wrapped_failure.split("\n")
+    if len(failure_lines) > 3:
+        failure_lines = failure_lines[:3]
+        failure_lines[-1] = failure_lines[-1][:24] + "..."
+    disp_failure = "\n".join(failure_lines)
+    draw.text((105, 575), f"「{disp_failure}」", fill="#EAEAEA", font=get_font(27), spacing=10)
 
-    # 8. パクリ防止：改ざん防止シリアルナンバー＆帰還URL
-    draw.line([(100, height - 140), (width - 100, height - 140)], fill="#444455", width=1)
-    draw.text((120, height - 105), f"SERIAL NO: {serial_no} (VERIFIED)", fill="#FFCC00", font=font_meta)
-    draw.text((width - 120, height - 105), f"ISSUED BY: {app_url}", fill="#888899", font=font_meta, anchor="ra")
+    # 7. 認定理由（自動折り返し）
+    draw.text((100, 715), "【 認定および授与の辞 】", fill="#E5C158", font=get_font(25))
+    wrapped_reason = textwrap.fill(reason, width=31)
+    draw.text((105, 760), wrapped_reason, fill="#A6A6BA", font=get_font(24), spacing=10)
 
-    return img
-
-# --- UIフロントエンド ---
-st.title("🎖️ 公式・黒歴史二つ名認定院")
-st.caption("消し去りたい過去のやらかしを、SNSで一生背負う『公認二つ名』に昇華します。")
-
-with st.form("cert_form"):
-    user_name = st.text_input("あなたの名前（またはハンドルネーム）", value="たけし")
-    user_failure = st.text_area(
-        "過去にやらかした最大の失敗・黒歴史", 
-        placeholder="例: 全社員の前で行うプレゼンで画面共有したまま怪しい検索履歴を晒した\n例: 酔っ払って元カノ全員に深夜3時に「元気？」と一斉送信した"
-    )
-    submitted = st.form_submit_button("🔥 公式認定証を発行する", type="primary", use_container_width=True)
-
-if submitted:
-    if not user_failure.strip():
-        st.error("やらかした失敗を入力してください。")
+    # 8. ランク表示
+    if "SSS" in rank:
+        rank_color = "#FF0055"  # SSS専用カラー
+    elif "SS" in rank or "Rank S" in rank:
+        rank_color = "#FF8800"
     else:
-        nickname, rank, serial_no = generate_nickname_data(user_name, user_failure)
-        
-        with st.spinner("公認印を押印し、偽造防止コードを生成中..."):
-            cert_img = create_certificate_image(user_name, user_failure, nickname, rank, serial_no)
-            
-            # 画像をバイトストリームに変換
-            buf = io.BytesIO()
-            cert_img.save(buf, format="PNG", quality=95)
-            byte_im = buf.getvalue()
+        rank_color = "#00FFCC"
 
-        st.success("✅ 厳正なる審査の結果、不名誉な二つ名が認定されました！")
-        
-        # 画面に画像表示
-        st.image(byte_im, caption="公式発行・偽造防止暗号化済み認定証", use_container_width=True)
+    draw.text((100, 995), f"過失深刻度ランク ： {rank}", fill=rank_color, font=get_font(27))
+    draw.text((100, 1045), f"公 式 認 定 日   ： {datetime.now().strftime('%Y年%m月%d日')}", fill="#888899", font=get_font(22))
 
-        # ダウンロードボタン
-        st.download_button(
-            label="📥 認定証画像を保存してSNSに晒す (PNG)",
-            data=byte_im,
-            file_name=f"certificate_{serial_no}.png",
-            mime="image/png",
-            use_container_width=True
-        )
+    # 9. 公式角印（重厚な二重朱印・中心配置）
+    stamp_x, stamp_y = width - 275, 960
+    stamp_w = 175
 
-        # Xシェア用リンク
-        share_text = f"【悲報】過去のやらかしにより、公式二つ名が決定しました。\n\n私の二つ名：{nickname}\n深刻度：{rank}\n証拠シリアル：{serial_no}\n\n#黒歴史二つ名認定院"
-        x_url = f"https://twitter.com/intent/tweet?text={requests.utils.quote(share_text)}"
-        st.markdown(f'''
-        <a href="{x_url}" target="_blank" style="text-decoration: none;">
-            <div style="background-color: #000; color: #fff; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; border: 1px solid #333; margin-top: 10px;">
-                𝕏 (Twitter) でこの不名誉を告発する
-            </div>
-        </a>
-        ''', unsafe_allow_html=True)
+    draw.rectangle([(stamp_x, stamp_y), (stamp_x + stamp_w, stamp_y + stamp_w)], fill="#1E0D12", outline="#D92626", width=4)
+    draw.rectangle([(stamp_x + 8, stamp_y + 8), (stamp_x + stamp_w - 8, stamp_y + stamp_w - 8)], outline="#D92626", width=1)
+
+    for ox in [stamp_x + 16, stamp_x + stamp_w - 16]:
+        for oy in [stamp_y + 16, stamp_y + stamp_w - 16]:
+            draw.ellipse([(ox - 3, oy - 3), (ox + 3, oy + 3)], fill="#D92626")
+
+    stamp_font = get_font(38)
+    draw.text((stamp_x + 48, stamp_y + 48), "黒", fill="#E83030", font=stamp_font, anchor="mm")
+    draw.text((stamp_x + 127, stamp_y + 48), "歴", fill="#E83030", font=stamp_font, anchor="mm")
+    draw.text((stamp_x + 48, stamp_y + 127), "院", fill="#E83030", font=stamp_font, anchor="mm")
+    draw.text((stamp_x + 127, stamp_y + 127), "印", fill="#E
