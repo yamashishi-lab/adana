@@ -1,328 +1,710 @@
+import json
+import numpy as np
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
-import io
-import os
-import requests
-import hashlib
-import random
-import textwrap
-from datetime import datetime
+import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="公式・黒歴史二つ名認定院",
-    page_icon="🎖️",
-    layout="centered"
+    page_title="Hyper-Drive Architect: Chrono & Cosmos",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-# --- 日本語フォントの自動取得（Streamlit Cloud環境対策） ---
-FONT_PATH = "NotoSansJP-Bold.ttf"
-if not os.path.exists(FONT_PATH):
-    font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Bold.otf"
-    try:
-        r = requests.get(font_url, timeout=15)
-        with open(FONT_PATH, "wb") as f:
-            f.write(r.content)
-    except Exception:
-        FONT_PATH = None
+st.title("🛸 Hyper-Drive Architect: Chrono & Cosmos")
+st.caption(
+    "※ 恒星間航行シミュレーター：架空ビークル造形・可変変形・相対論的時間遅延・SF版RUD完全再現版"
+)
 
-# ==============================================================================
-# 失敗内容（コンテキスト）解析 ＆ 超短縮・直感的二つ名エンジン
-# ==============================================================================
-CATEGORY_NICKNAMES = {
-    "work_it": {
-        "keywords": ["画面", "共有", "会議", "社内", "上司", "プレゼン", "メール", "誤送信", "誤爆", "Slack", "Teams", "チャット", "全社"],
-        "prefixes": ["秒速の", "全画面の", "無警戒な", "痛恨の", "公開処刑の", "ノーガード", "突貫の"],
-        "cores": ["誤爆王", "露出狂", "戦犯", "大惨事", "配信者", "自爆神", "テロリスト"]
+# =========================================================================
+# 🌌 データベース：シャーシ・動力炉・目的地・マテリアル
+# =========================================================================
+CHASSIS_TYPES = {
+    "アルクビエレ・デュアルリング艦 (Warp Ring Cruiser)": {
+        "id": "ring_cruiser",
+        "base_mass": 420.0,
+        "warp_eff": 1.45,
+        "heat_cap": 8500.0,
+        "desc": "二重反転超伝導リングによる空間歪曲航行。安定したワープバブルを形成する正統派巡洋艦。",
     },
-    "love": {
-        "keywords": ["元カノ", "元彼", "告白", "LINE", "既読", "振られ", "浮気", "デート", "深夜", "好き", "未練", "復縁"],
-        "prefixes": ["深夜の", "未練たらたら", "泥沼の", "一方通行の", "空回り", "自爆特攻の", "ゾンビ級"],
-        "cores": ["未練鬼", "怪文書師", "自爆魔", "ピエロ", "撃沈王", "亡霊", "ストーカー"]
+    "ソーラー・ヴァルキリー (Laser-Sail Clipper)": {
+        "id": "solar_valkyrie",
+        "base_mass": 180.0,
+        "warp_eff": 1.15,
+        "heat_cap": 6200.0,
+        "desc": "6枚の結晶光帆を展開。母星側レーザーと太陽風を受け、優美に加速する長距離高速帆船。",
     },
-    "alcohol": {
-        "keywords": ["酒", "酔っ払", "飲み会", "泥酔", "記憶", "吐い", "終電", "二日酔い", "居酒屋", "テキーラ", "ビール"],
-        "prefixes": ["泥酔の", "記憶喪失の", "ノーブレーキ", "暴走の", "制御不能の", "千鳥足の", "液体窒素級"],
-        "cores": ["酒乱神", "撃沈艦", "粗相王", "迷惑鬼", "爆死職人", "大失態", "廃人"]
+    "重力制御モノリス「オベリスク」 (Zero-Point Monolith)": {
+        "id": "monolith",
+        "base_mass": 980.0,
+        "warp_eff": 1.85,
+        "heat_cap": 14000.0,
+        "desc": "推進器を持たない鏡面八面体。上下に船体が割れ、内部の特異点コアから重力場を直接生み出す。",
     },
-    "money": {
-        "keywords": ["金", "借金", "課金", "クレカ", "散財", "パチンコ", "競馬", "ギャンブル", "投資", "残高", "衝動買い"],
-        "prefixes": ["無計画な", "秒速全損の", "自転車操業の", "ノーガード", "破滅型の", "底なしの"],
-        "cores": ["散財神", "全ロス王", "負債魔人", "浪費鬼", "破綻者", "大赤字", "養分"]
+    "恒星間レールガン突撃艇「ロンギヌス」 (Mass-Driver Striker)": {
+        "id": "longinus",
+        "base_mass": 320.0,
+        "warp_eff": 1.05,
+        "heat_cap": 9500.0,
+        "desc": "全長の8割が電磁加速砲身。装甲が横にスライド展開し内部ラジエーターを露出させて超加速する強襲艇。",
     },
-    "time_laziness": {
-        "keywords": ["遅刻", "寝坊", "ドタキャン", "サボり", "すっぽかし", "二度寝", "バックレ"],
-        "prefixes": ["時空歪める", "全自動の", "息を吐くように", "堂々たる", "常習犯の", "秒針無視の"],
-        "cores": ["遅刻魔", "ドタキャン鬼", "脱走兵", "寝坊神", "サボり魔", "蒸発王"]
+    "次元潜航トリマラン「リヴァイアサン」 (Sub-Space Trimaran)": {
+        "id": "trimaran",
+        "base_mass": 650.0,
+        "warp_eff": 1.60,
+        "heat_cap": 11000.0,
+        "desc": "重厚な三胴ハル。超加速モード突入時に左右の大型ワープ・ナセルがX字状に可変展開する。",
     },
-    "blunder_mouth": {
-        "keywords": ["失言", "口が滑", "暴露", "秘密", "悪口", "ポロリ", "自慢"],
-        "prefixes": ["口先だけの", "余計な一言の", "ノーフィルター", "墓穴掘りの", "地雷踏み抜く"],
-        "cores": ["失言王", "墓穴職人", "燃料係", "地雷神", "毒舌ピエロ", "スピーカー"]
-    }
+    "【ジョーク】超時空・屋台ラーメン『銀河軒』 (Tachyon Noodle Stand)": {
+        "id": "ramen_cart",
+        "base_mass": 12.0,
+        "warp_eff": 2.20,
+        "heat_cap": 3500.0,
+        "desc": "赤提灯と暖簾の裏にタキオン濃縮炉を積載。プラズマ豚骨スープの反作用で時空を突き破る謎の移動屋台。",
+    },
 }
 
-# 該当ジャンルがない場合の汎用ショート二つ名
-GENERIC_PREFIXES = ["秒速の", "天然の", "無自覚な", "不可逆の", "世紀末の", "歩く", "自業自得の", "哀愁の", "問答無用の", "完全敗北の"]
-GENERIC_CORES = ["地雷原", "自爆王", "大惨事", "黒歴史神", "戦犯", "ピエロ", "墓穴職人", "反面教師", "やらかし魔", "破滅フラグ"]
+POWER_CORES = {
+    "零点エネルギー抽出炉 (Zero-Point ZPE Tap)": {
+        "power_gw": 85000.0,
+        "waste_heat_ratio": 0.08,
+        "stability": 0.98,
+        "glow_hex": 0x38BDF8,
+    },
+    "反物質対消滅コア (Antimatter Beam Core)": {
+        "power_gw": 140000.0,
+        "waste_heat_ratio": 0.22,
+        "stability": 0.94,
+        "glow_hex": 0xF43F5E,
+    },
+    "人工マイクロ・ブラックホール (Kerr Singularity)": {
+        "power_gw": 290000.0,
+        "waste_heat_ratio": 0.15,
+        "stability": 0.88,
+        "glow_hex": 0xA855F7,
+    },
+    "【ジョーク】回転する猫とバタートースト永久機関": {
+        "power_gw": 999999.0,
+        "waste_heat_ratio": 0.02,
+        "stability": 0.99,
+        "glow_hex": 0xFBBF24,
+    },
+}
 
-# ==============================================================================
-# ブラックジョーク・皮肉 1,000通り生成エンジン（10 × 10 × 10）
-# ==============================================================================
-REASON_OPENINGS = [
-    "貴殿がやらかした上記の大失態は、人類の愚かさの極致を鮮やかに体現しており、",
-    "常人には到底真似できない絶妙なタイミングで自爆を遂げたその蛮勇は、まさに天災であり、",
-    "冷静な思考を完全に放棄し、本能の赴くままに引き起こされた芸術的惨劇は、",
-    "何一つ言い訳の余地が残されていない純度100％の自滅劇であり、",
-    "世間が凍りつき、味方すら全員が静かに距離を置いたあの歴史的失態は、",
-    "理性より先にちっぽけなプライドが木っ端微塵に粉砕されたあの刹那は、",
-    "もし恥ずかしさで人間が核分裂を起こすなら、地球を3回消滅させていた規模であり、",
-    "知能と危機管理能力の完全な欠如を、これ以上ない明快さで証明したその功績は、",
-    "目撃した全員が『見なかったことにしてやろう』と憐れみの目を向けたあの惨状は、",
-    "後悔と羞恥心で深夜にベッドの上で奇声を上げのたうち回るに相応しいあの凶行は、"
-]
+DESTINATIONS = {
+    "火星 オリンポス・テラフォーミング軌道都市": {
+        "dist_au": 0.52,
+        "dist_ly": 0.000008,
+        "color_hex": 0xC2410C,
+        "type": "mars",
+        "desc": "赤く染まる地表とテラフォーミングドーム群。第1マスキャッチャーリングが待機。",
+    },
+    "木星 大赤斑上空・浮遊採掘ステーション": {
+        "dist_au": 4.20,
+        "dist_ly": 0.000066,
+        "color_hex": 0xD97706,
+        "type": "jupiter",
+        "desc": "荒れ狂う大赤斑の真上。ガス採取用巨大アンカーリングへ突入。",
+    },
+    "土星リング 氷冠採掘ゲート「クロノス」": {
+        "dist_au": 9.58,
+        "dist_ly": 0.000151,
+        "color_hex": 0xE2E8F0,
+        "type": "saturn",
+        "desc": "無数の氷塊が回る巨大環の隙間に鎮座する超大型減速ゲート。",
+    },
+    "ブラックホール「ガルガンチュア」事象の地平面スレスレ観光": {
+        "dist_au": 18000.0,
+        "dist_ly": 0.285,
+        "color_hex": 0x1E1B4B,
+        "type": "blackhole",
+        "desc": "光さえ脱出不可能な極限重力場。時空の歪みをかすめて周回軌道へ入る決死のルート。",
+    },
+}
 
-REASON_BODIES = [
-    "関わったすべての人間に深い溜め息と、一生酒の肴にできる特大の失笑を提供しました。",
-    "どれほど高い授業料を払っても決して取り返せない信頼と尊厳を、一瞬で消滅させました。",
-    "歴史の教科書に『反面教師の最高傑作』としてフルネームで掲載すべきレベルに達しています。",
-    "周囲を震撼させ、その場の空気を絶対零度まで急冷却する驚異的な破壊力を誇りました。",
-    "『記憶を消す装置』が実用化された暁には、最初の被験者として真っ先に推薦されるべき偉業です。",
-    "救いようのない哀愁と、誰の共感も得られない孤立無援の地獄を生み出しました。",
-    "貴殿の人生のハイライトが『これ』で確定してしまったという残酷な現実を突きつけています。",
-    "神ですら匙を投げてその場から立ち去るレベルの、非の打ち所がないパーフェクトな自爆でした。",
-    "どれだけ美談に仕立て上げようとしても、下水のような悪臭を放つ恥辱のモニュメントです。",
-    "関わった友人知人の連絡先から、貴殿の名前が静かに削除される決定打となりました。"
-]
+HULL_MATERIALS = {
+    "自己修復液体金属 (Nanite Silver)": {
+        "color": 0xF1F5F9,
+        "roughness": 0.05,
+        "metalness": 0.98,
+        "structural_limit_g": 6500.0,
+    },
+    "ダマスカス量子合金 (Quantum Composite)": {
+        "color": 0x1E293B,
+        "roughness": 0.35,
+        "metalness": 0.85,
+        "structural_limit_g": 4800.0,
+    },
+    "縮退物質ブラックアーマー (Degenerate Armor)": {
+        "color": 0x050505,
+        "roughness": 0.85,
+        "metalness": 0.20,
+        "structural_limit_g": 9200.0,
+    },
+    "屋台用 天然ヒノキ木材＆赤提灯ビニール": {
+        "color": 0xD97706,
+        "roughness": 0.90,
+        "metalness": 0.05,
+        "structural_limit_g": 1200.0,
+    },
+}
 
-REASON_CLOSINGS = [
-    "記憶から消したいと願う浅はかな祈りを即座に却下し、ここに終身二つ名として永遠に刻印します。",
-    "その栄誉ある恥辱を讃え、墓場まで背負うべき呪いとして当院公式の永久ブラックリストに登録します。",
-    "二度と元の平穏な日常には戻れない証として、この不名誉極まりない称号を謹んで贈呈いたします。",
-    "貴殿がこの先どれほど徳を積もうとも帳消しにはならない汚点として、厳正に認定証を交付します。",
-    "来世まで語り継がれるべき人類の汚点として、当院公認の烙印をその魂に深く刻み込みます。",
-    "せめてもの慈悲として、この認定証を見るたびに己の愚かさを猛省することを義務付けます。",
-    "死ぬ間際の走馬灯で真っ先に高画質再生されるよう、公式アーカイブに永久保存いたします。",
-    "この称号が貴殿の余生に相応しい重荷となり続けることを、審査員一同心より確信しております。",
-    "もはや失うものなど何一つない無敵のピエロとして、堂々と胸を張って泥道を歩んでください。",
-    "この恥辱を忘れかけた頃に再び悪夢として蘇るよう、呪詛を込めてここに公認認定証を発行します。"
-]
+# =========================================================================
+# ⚙️ Streamlit UI タブ設計
+# =========================================================================
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🛸 船体シャーシ & 外装",
+    "⚡ 動力炉 & ワープドライブ",
+    "🛡️ 慣性ダンパー & シールド",
+    "🔥 展開放熱翼 & 冷却系",
+    "🎯 目的地 & 航法ガイダンス",
+])
 
-# 過失深刻度ランク（SSSは0.01%の天文学的確率）
-RANKS_WEIGHTED = [
-    ("【級外】微小な赤恥 (Rank D)", 45.0),
-    ("【軽過失】日常的失態 (Rank C)", 30.0),
-    ("【中過失】赤面トラウマ (Rank B)", 16.0),
-    ("【重過失】人間関係亀裂 (Rank A)", 7.5),
-    ("【特級過失】懲戒免職・絶縁級 (Rank S)", 1.4),
-    ("【極刑過失】人生再起動推奨 (Rank SS)", 0.09),
-    ("【世界遺産級・破滅】永久封印の呪物 (Rank SSS)", 0.01)
-]
-
-def generate_nickname_data(name, failure):
-    seed_str = f"{name.strip()}_{failure.strip()}"
-    hash_obj = hashlib.sha256(seed_str.encode("utf-8"))
-    hex_digest = hash_obj.hexdigest()
-    rng = random.Random(int(hex_digest[:8], 16))
-
-    # 失敗内容のキーワードマッチング
-    matched_cat = None
-    for cat_id, data in CATEGORY_NICKNAMES.items():
-        if any(k in failure for k in data["keywords"]):
-            matched_cat = data
-            break
-
-    if matched_cat:
-        prefix = rng.choice(matched_cat["prefixes"])
-        core = rng.choice(matched_cat["cores"])
-    else:
-        prefix = rng.choice(GENERIC_PREFIXES)
-        core = rng.choice(GENERIC_CORES)
-
-    # 短くシンプルに（例：「秒速の誤爆王」）
-    nickname = f"“{prefix}{core}”"
-
-    reason = f"{rng.choice(REASON_OPENINGS)}{rng.choice(REASON_BODIES)}{rng.choice(REASON_CLOSINGS)}"
-
-    rank_choices, weights = zip(*RANKS_WEIGHTED)
-    rank = rng.choices(rank_choices, weights=weights, k=1)[0]
-
-    serial_no = f"REG-{hex_digest[:4].upper()}-{hex_digest[4:8].upper()}-{hex_digest[8:12].upper()}"
-    return nickname, rank, reason, serial_no
-
-# --- 認定証画像レンダリング（賞状・金彩フレーム・本格印章） ---
-def create_certificate_image(name, failure, nickname, rank, reason, serial_no, app_url="https://regret-court.streamlit.app"):
-    width, height = 1080, 1440
-    img = Image.new("RGB", (width, height), color="#0D0D12")
-    draw = ImageDraw.Draw(img)
-
-    def get_font(size):
-        if FONT_PATH and os.path.exists(FONT_PATH):
-            return ImageFont.truetype(FONT_PATH, size)
-        return ImageFont.load_default()
-
-    # 1. 賞状・金彩多重フレーム（Gold Leaf Certificate Style）
-    draw.rectangle([(25, 25), (width - 25, height - 25)], outline="#D4AF37", width=4)
-    draw.rectangle([(35, 35), (width - 35, height - 35)], outline="#5A4A1C", width=1)
-    draw.rectangle([(42, 42), (width - 42, height - 42)], outline="#E8C864", width=2)
-    draw.rectangle([(50, 50), (width - 50, height - 50)], outline="#3A3014", width=1)
-
-    # 伝統的な賞状風コーナーオーナメント
-    cs = 45
-    corners = [
-        (50, 50, 1, 1),
-        (width - 50, 50, -1, 1),
-        (50, height - 50, 1, -1),
-        (width - 50, height - 50, -1, -1)
-    ]
-    for cx, cy, dx, dy in corners:
-        # コーナー幾何学ライン
-        draw.line([(cx, cy), (cx + dx * cs, cy)], fill="#E8C864", width=3)
-        draw.line([(cx, cy), (cx, cy + dy * cs)], fill="#E8C864", width=3)
-        draw.line([(cx + dx * 10, cy + dy * 10), (cx + dx * cs, cy + dy * 10)], fill="#AA8828", width=1)
-        draw.line([(cx + dx * 10, cy + dy * 10), (cx + dx * 10, cy + dy * cs)], fill="#AA8828", width=1)
-        draw.rectangle([(cx + dx * 14 - 3, cy + dy * 14 - 3), (cx + dx * 14 + 3, cy + dy * 14 + 3)], fill="#D4AF37")
-
-    # 2. 中央透かし（クラシカル・ウォーターマーク）
-    draw.text((width // 2, height // 2 - 20), "CERTIFICATE OF DISHONOR", fill="#14141E", font=get_font(56), anchor="mm")
-
-    # 3. ヘッダー（格調高い賞状タイトル）
-    draw.text((width // 2, 105), "認　定　証", fill="#F5D77F", font=get_font(58), anchor="mm")
-    draw.text((width // 2, 155), "CERTIFICATE OF OFFICIAL REGRET ALIAS", fill="#9A8C6A", font=get_font(20), anchor="mm")
-    
-    # 飾り仕切り線
-    draw.line([(220, 185), (width - 220, 185)], fill="#D4AF37", width=2)
-    draw.polygon([(width // 2 - 6, 185 - 5), (width // 2 + 6, 185 - 5), (width // 2, 185 + 5)], fill="#D4AF37")
-
-    # 4. 被認定者（受賞者表記）
-    name_str = f"{name}　殿"
-    name_size = 46
-    name_font = get_font(name_size)
-    while name_size > 24 and name_font.getlength(name_str) > (width - 220):
-        name_size -= 2
-        name_font = get_font(name_size)
-    draw.text((120, 245), name_str, fill="#FFFFFF", font=name_font)
-
-    # 5. 終身二つ名枠（短くインパクトのある黄金プレート）
-    draw.rectangle([(100, 315), (width - 100, 475)], fill="#15141E", outline="#C43C3C", width=2)
-    draw.rectangle([(106, 321), (width - 106, 469)], outline="#7A2222", width=1)
-    draw.text((width // 2, 350), "―　授 与 さ れ し 終 身 二 つ 名　―", fill="#E55555", font=get_font(22), anchor="mm")
-
-    nick_size = 56
-    nick_font = get_font(nick_size)
-    while nick_size > 26 and nick_font.getlength(nickname) > (width - 260):
-        nick_size -= 2
-        nick_font = get_font(nick_size)
-    draw.text((width // 2, 415), nickname, fill="#FFDF00", font=nick_font, anchor="mm")
-
-    # 6. 過失記録事由（本文冒頭）
-    draw.text((110, 525), "【 認定対象事由（過失記録） 】", fill="#D4AF37", font=get_font(24))
-
-    clean_failure = failure.replace("\n", " ").strip()
-    wrapped_failure = textwrap.fill(clean_failure, width=28)
-    failure_lines = wrapped_failure.split("\n")
-    if len(failure_lines) > 3:
-        failure_lines = failure_lines[:3]
-        failure_lines[-1] = failure_lines[-1][:24] + "..."
-    disp_failure = "\n".join(failure_lines)
-    draw.text((115, 570), f"「{disp_failure}」", fill="#EAEAEA", font=get_font(26), spacing=10)
-
-    # 7. 認定および授与の辞（賞状本文）
-    draw.text((110, 710), "【 認定の辞 】", fill="#D4AF37", font=get_font(24))
-    wrapped_reason = textwrap.fill(reason, width=31)
-    draw.text((115, 755), wrapped_reason, fill="#B0B0C0", font=get_font(24), spacing=11)
-
-    # 8. ランク表記
-    if "SSS" in rank:
-        rank_color = "#FF0055"
-    elif "SS" in rank or "Rank S" in rank:
-        rank_color = "#FF9900"
-    else:
-        rank_color = "#00E5AA"
-
-    draw.text((110, 995), f"過失深刻度ランク ： {rank}", fill=rank_color, font=get_font(26))
-    draw.text((110, 1045), f"認 定 機 関      ： 全国黒歴史認定院 審査第一局", fill="#888899", font=get_font(22))
-    draw.text((110, 1085), f"公 式 発 行 日   ： {datetime.now().strftime('%Y年%m月%d日')}", fill="#888899", font=get_font(22))
-
-    # 9. 本格公式角印（三重枠・朱肉滲み風・重厚デザイン）
-    stamp_x, stamp_y = width - 290, 965
-    stamp_size = 180
-
-    # 印章の外枠（重厚な三重線）
-    draw.rectangle([(stamp_x, stamp_y), (stamp_x + stamp_size, stamp_y + stamp_size)], fill="#1C0A0E", outline="#C92020", width=5)
-    draw.rectangle([(stamp_x + 7, stamp_y + 7), (stamp_x + stamp_size - 7, stamp_y + stamp_size - 7)], outline="#8A1414", width=1)
-    draw.rectangle([(stamp_x + 12, stamp_y + 12), (stamp_x + stamp_size - 12, stamp_y + stamp_size - 12)], outline="#C92020", width=2)
-
-    # 四隅のコーナーリベット
-    for rx, ry in [
-        (stamp_x + 22, stamp_y + 22),
-        (stamp_x + stamp_size - 22, stamp_y + 22),
-        (stamp_x + 22, stamp_y + stamp_size - 22),
-        (stamp_x + stamp_size - 22, stamp_y + stamp_size - 22)
-    ]:
-        draw.ellipse([(rx - 3, ry - 3), (rx + 3, ry + 3)], fill="#C92020")
-
-    # 伝統的な篆書体風配置（右上:黒、右下:歴、左上:院、左下:印）
-    # ※印章の伝統的配置ルールに準拠
-    stamp_font = get_font(38)
-    draw.text((stamp_x + 128, stamp_y + 54), "黒", fill="#E62E2E", font=stamp_font, anchor="mm")
-    draw.text((stamp_x + 128, stamp_y + 128), "歴", fill="#E62E2E", font=stamp_font, anchor="mm")
-    draw.text((stamp_x + 54, stamp_y + 54), "院", fill="#E62E2E", font=stamp_font, anchor="mm")
-    draw.text((stamp_x + 54, stamp_y + 128), "印", fill="#E62E2E", font=stamp_font, anchor="mm")
-
-    # 10. フッター
-    draw.line([(80, height - 110), (width - 80, height - 110)], fill="#3B3528", width=1)
-    draw.text((90, height - 75), f"REGISTRATION NO: {serial_no}", fill="#D4AF37", font=get_font(21))
-    draw.text((width - 90, height - 75), f"ARCHIVE: {app_url}", fill="#777785", font=get_font(20), anchor="ra")
-
-    return img
-
-# --- Streamlit フロントエンド ---
-st.title("🎖️ 公式・黒歴史二つ名認定院")
-st.caption("消し去りたい過去の過失を、厳格な審査を経て一生背負う『公認二つ名』へと昇華します。")
-
-with st.form("cert_form"):
-    user_name = st.text_input("あなたの名前（またはハンドルネーム）", value="たけし")
-    user_failure = st.text_area(
-        "過去にやらかした最大の失敗・黒歴史", 
-        placeholder="例: 全社員の前で行うプレゼンで画面共有したまま怪しい検索履歴を晒した\n例: 酔っ払って元カノ全員に深夜3時に「元気？」と一斉送信した"
+with tab1:
+  c1, c2 = st.columns(2)
+  with c1:
+    chassis_choice = st.selectbox(
+        "ベースビークル (シャーシ)", list(CHASSIS_TYPES.keys())
     )
-    submitted = st.form_submit_button("🔥 厳正なる審査を受け認定証を発行する", type="primary", use_container_width=True)
+    material_choice = st.selectbox(
+        "船体外装マテリアル", list(HULL_MATERIALS.keys())
+    )
+  with c2:
+    st.info(f"**艦種解説:** {CHASSIS_TYPES[chassis_choice]['desc']}")
+    hull_scale = st.slider("機体スケール倍率", 0.5, 2.5, 1.0, step=0.1)
 
-if submitted:
-    if not user_failure.strip():
-        st.error("やらかした失敗を入力してください。")
+with tab2:
+  c1, c2 = st.columns(2)
+  with c1:
+    core_choice = st.selectbox("メイン動力炉", list(POWER_CORES.keys()))
+    warp_factor = st.slider("ワープ曲率倍率 (Warp Factor)", 1.0, 9.9, 7.5, step=0.1)
+  with c2:
+    throttle_limit = st.slider("ドライブ出力リミッター (%)", 50, 150, 100, step=5)
+    st.caption("※ 100%超過はコア不安定化と廃熱急上昇のリスクを伴います。")
+
+with tab3:
+  c1, c2 = st.columns(2)
+  with c1:
+    damper_efficiency = st.slider(
+        "慣性ダンパー相殺率 (%)",
+        99.000,
+        99.999,
+        99.985,
+        step=0.001,
+        format="%.3f%%",
+    )
+    st.caption("※ 0.01%の相殺不足でも乗員・船体に数十〜数百Gの致命的負荷がかかります。")
+  with c2:
+    deflector_power = st.slider(
+        "デフレクターシールド出力 (GW)", 100, 2500, 1200, step=50
+    )
+    deflector_angle = st.slider("シールド迎角 (deg)", 10, 80, 45, step=5)
+
+with tab4:
+  c1, c2 = st.columns(2)
+  with c1:
+    radiator_wings = st.slider("展開式放熱フィン翼数", 2, 8, 4, step=2)
+    radiator_area = st.slider(
+        "放熱翼 展開面積 (m²)", 200.0, 5000.0, 1800.0, step=100.0
+    )
+  with c2:
+    coolant_flow = st.slider(
+        "超流動ヘリウム冷却材 循環レート (L/s)", 50, 800, 350, step=25
+    )
+    st.caption("※ 廃熱が許容量を超えると船体が自らの熱で融解メルトダウンします。")
+
+with tab5:
+  c1, c2 = st.columns(2)
+  with c1:
+    dest_choice = st.selectbox("航行目的地セレクター", list(DESTINATIONS.keys()))
+    st.caption(f"**目的宙域環境:** {DESTINATIONS[dest_choice]['desc']}")
+  with c2:
+    flip_burn_ratio = st.slider(
+        "反転減速（フリップ＆バーン）開始ポイント",
+        0.50,
+        0.95,
+        0.75,
+        step=0.01,
+    )
+    st.caption("※ 減速開始が遅すぎると目的地の惑星やゲートを光速で突き抜けます。")
+
+# =========================================================================
+# 💥 物理・時空シミュレーション計算
+# =========================================================================
+chosen_chassis = CHASSIS_TYPES[chassis_choice]
+chosen_core = POWER_CORES[core_choice]
+chosen_dest = DESTINATIONS[dest_choice]
+chosen_mat = HULL_MATERIALS[material_choice]
+
+
+def run_space_sim(preview_only=False):
+  if preview_only:
+    return [{
+        "t": 0.0,
+        "ship_time": 0.0,
+        "earth_time": 0.0,
+        "pos_ratio": 0.0,
+        "v_c": 0.0,
+        "raw_g": 0.0,
+        "effective_g": 0.0,
+        "heat_k": 300.0,
+        "phase": "PAD_INSPECTION",
+        "exploded": False,
+        "rud_reason": None,
+        "transform_morph": 0.0,
+    }], None
+
+  history = []
+  fail_reason = None
+  dt = 0.5
+  total_steps = 140
+
+  ship_mass = chosen_chassis["base_mass"] * hull_scale
+  max_thrust_kn = (
+      chosen_core["power_gw"]
+      * (throttle_limit / 100.0)
+      * chosen_chassis["warp_eff"]
+      * 18.0
+  )
+  heat_current = 295.0
+
+  uncompensated_ratio = (100.0 - damper_efficiency) / 100.0
+  heat_dissipation_rate = (
+      (radiator_area * 0.45 + coolant_flow * 2.2)
+      * 0.08
+      / (ship_mass * 0.05)
+  )
+
+  v_c = 0.0
+  dist_progress = 0.0
+  ship_elapsed_s = 0.0
+  earth_elapsed_s = 0.0
+
+  for step in range(total_steps):
+    t = step * dt
+
+    # フェーズ定義
+    # 0~15: カタパルト射出加速
+    # 15~85: 超時空ワープ巡航
+    # 85~130: 反転減速＆リング突入
+    # 130~: 到着キャッチ
+    if t < 8.0:
+      phase = "CATAPULT_LAUNCH"
+      transform_morph = min(1.0, t / 8.0)
+      raw_acc_g = (max_thrust_kn * 0.25) / (ship_mass * 9.8)
+      v_c = min(0.15, (t / 8.0) * 0.15)
+      dist_progress += (v_c * 0.002) * dt
+    elif dist_progress < flip_burn_ratio:
+      phase = "WARP_CRUISE"
+      transform_morph = 1.0
+      target_vc = min(0.992, 0.15 + (warp_factor / 10.0) * 0.84)
+      v_c = min(target_vc, v_c + 0.08 * dt)
+      raw_acc_g = (max_thrust_kn) / (ship_mass * 9.8)
+      dist_progress += (v_c * 0.016) * dt
     else:
-        nickname, rank, reason, serial_no = generate_nickname_data(user_name, user_failure)
+      phase = "DECEL_APPROACH"
+      transform_morph = max(0.2, 1.0 - (dist_progress - flip_burn_ratio) * 2.5)
+      raw_acc_g = (max_thrust_kn * 1.3) / (ship_mass * 9.8)
+      v_c = max(0.005, v_c - 0.095 * dt)
+      dist_progress += (v_c * 0.012) * dt
 
-        with st.spinner("過失内容を精査し、公認朱印を押印中..."):
-            cert_img = create_certificate_image(user_name, user_failure, nickname, rank, reason, serial_no)
+    effective_g = raw_acc_g * uncompensated_ratio
 
-            buf = io.BytesIO()
-            cert_img.save(buf, format="PNG", quality=95)
-            byte_im = buf.getvalue()
+    # 特殊相対性理論：ローレンツ因子 gamma
+    gamma = 1.0 / np.sqrt(max(0.001, 1.0 - (min(0.999, v_c) ** 2)))
+    dt_ship = dt / gamma
+    dt_earth = dt * gamma
+    ship_elapsed_s += dt_ship
+    earth_elapsed_s += dt_earth
 
-        if "SSS" in rank:
-            st.balloons()
-            st.error("⚠️【警告】0.01%の天文学的確率で『世界遺産級・破滅 (Rank SSS)』を引き当ててしまいました。")
-        else:
-            st.success("✅ 厳正なる審査の結果、不名誉な終身二つ名が認定されました！")
+    # 熱収支計算
+    heat_in = (
+        (chosen_core["power_gw"] * (throttle_limit / 100.0))
+        * chosen_core["waste_heat_ratio"]
+        * (0.45 + (v_c**1.5) * 1.2)
+    ) / (ship_mass * 0.12)
+    heat_current = max(
+        290.0, heat_current + (heat_in - heat_dissipation_rate) * dt
+    )
 
-        st.image(byte_im, caption="公式発行・金彩偽造防止暗号化済み認定証", use_container_width=True)
+    # 💥 SF版 RUD（事故判定）
+    rud = False
 
-        st.download_button(
-            label="📥 認定証画像を保存してSNSに晒す (PNG)",
-            data=byte_im,
-            file_name=f"certificate_{serial_no}.png",
-            mime="image/png",
-            use_container_width=True
-        )
+    # 1. 慣性ダンパー落ちアコーディオン圧壊
+    if effective_g > chosen_mat["structural_limit_g"]:
+      fail_reason = (
+          f"【重力制御崩壊・アコーディオン圧壊】実効慣性G ({effective_g:.1f} G) が"
+          f" {material_choice} の限界 ({chosen_mat['structural_limit_g']:.0f} G)"
+          " を突破。船体が一瞬でペシャンコに潰れました。"
+      )
+      rud = True
+    # 2. 廃熱パンク・メルトダウン
+    elif heat_current > chosen_chassis["heat_cap"]:
+      fail_reason = (
+          f"【放熱限界・熱核メルトダウン】船内温度 ({heat_current:.0f} K) が"
+          f" 許容限界 ({chosen_chassis['heat_cap']:.0f} K)"
+          " を超過。ラジエーター能力不足により船体が蒸発しました。"
+      )
+      rud = True
+    # 3. 宇宙塵衝突（デフレクター破壊）
+    elif (
+        v_c > 0.4
+        and (deflector_power * np.sin(np.radians(deflector_angle)))
+        < (v_c * 1800.0)
+    ):
+      fail_reason = (
+          f"【宇宙塵・超音速カタストロフィ】光速の {v_c*100:.1f}% で微小デブリ群と衝突。"
+          f" デフレクター出力 ({deflector_power} GW) が突破され船体が消滅しました。"
+      )
+      rud = True
+    # 4. 特異点コア・ブラックホール暴走
+    elif (
+        core_choice == "人工マイクロ・ブラックホール (Kerr Singularity)"
+        and throttle_limit > 125
+        and t > 18.0
+    ):
+      fail_reason = (
+          "【事象の地平面・自壊呑み込み】特異点磁気トラップが臨界突破。"
+          " 宇宙船が自身の人工ブラックホールに内側から吸い込まれました。"
+      )
+      rud = True
+    # 5. 反転遅れ・惑星直撃貫通
+    elif dist_progress >= 1.05 and v_c > 0.15:
+      fail_reason = (
+          f"【オーバーシュート・惑星超光速激突】フリップ＆バーン開始比率"
+          f" ({flip_burn_ratio:.2f})"
+          " が遅すぎ、ブレーキが間に合わず目的地の地表に直撃しました。"
+      )
+      rud = True
 
-        share_text = f"【悲報】過去のやらかしにより、公式二つ名が決定しました。\n\n二つ名：{nickname}\n深刻度：{rank}\n証拠シリアル：{serial_no}\n\n#黒歴史二つ名認定院"
-        x_url = f"https://twitter.com/intent/tweet?text={requests.utils.quote(share_text)}"
-        st.markdown(f'''
-        <a href="{x_url}" target="_blank" style="text-decoration: none;">
-            <div style="background-color: #000; color: #fff; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; border: 1px solid #333; margin-top: 10px;">
-                𝕏 (Twitter) でこの不名誉を告発する
-            </div>
-        </a>
-        ''', unsafe_allow_html=True)
+    history.append({
+        "t": float(t),
+        "ship_time": float(ship_elapsed_s),
+        "earth_time": float(earth_elapsed_s),
+        "pos_ratio": float(min(1.0, dist_progress)),
+        "v_c": float(v_c),
+        "raw_g": float(raw_acc_g),
+        "effective_g": float(effective_g),
+        "heat_k": float(heat_current),
+        "phase": "RUD" if rud else phase,
+        "exploded": rud,
+        "rud_reason": fail_reason,
+        "transform_morph": float(transform_morph),
+    })
+
+    if rud:
+      break
+    if dist_progress >= 1.0 and v_c <= 0.05:
+      # 到着成功
+      for _ in range(15):
+        history.append({
+            "t": float(t + 1.0),
+            "ship_time": float(ship_elapsed_s),
+            "earth_time": float(earth_elapsed_s),
+            "pos_ratio": 1.0,
+            "v_c": 0.0,
+            "raw_g": 0.0,
+            "effective_g": 0.0,
+            "heat_k": float(heat_current * 0.95),
+            "phase": "ARRIVED",
+            "exploded": False,
+            "rud_reason": None,
+            "transform_morph": 0.0,
+        })
+      break
+
+  return history, fail_reason
+
+
+# =========================================================================
+# 🚀 実行トリガー & JSONペイロード生成
+# =========================================================================
+st.markdown("---")
+c_run1, c_run2 = st.columns([3, 1])
+with c_run1:
+  warp_engage = st.button(
+      "⚡ HYPER-DRIVE ENGAGE (ワープ跳躍シーケンス点火)",
+      use_container_width=True,
+      type="primary",
+  )
+with c_run2:
+  st.caption("※ パラメータ変更時はプレビューモードで艦の3D形状を確認可能。")
+
+sim_history, sim_error = run_space_sim(preview_only=(not warp_engage))
+
+frontend_cfg = {
+    "is_preview": not warp_engage,
+    "chassis_id": chosen_chassis["id"],
+    "hull_color": chosen_mat["color"],
+    "roughness": chosen_mat["roughness"],
+    "metalness": chosen_mat["metalness"],
+    "core_glow": chosen_core["glow_hex"],
+    "dest_type": chosen_dest["type"],
+    "dest_color": chosen_dest["color_hex"],
+    "radiator_wings": radiator_wings,
+    "hull_scale": hull_scale,
+}
+
+sim_json = json.dumps(sim_history)
+cfg_json = json.dumps(frontend_cfg)
+fail_msg_safe = (sim_error or "").replace('"', '\\"').replace("'", "\\'")
+
+# =========================================================================
+# 📺 Three.js + Web Audio 一体型 HTML 描画テンプレート
+# =========================================================================
+html_code = """<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;}body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000208;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;user-select:none;}
+#canvas-main{width:100%;height:100%;display:block;position:absolute;top:0;left:0;z-index:1;}
+.hud-top{position:absolute;top:0;left:0;width:100%;min-height:44px;background:linear-gradient(180deg,rgba(5,10,25,0.96) 0%,rgba(5,10,25,0.85) 100%);border-bottom:1px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:space-between;padding:4px 16px;z-index:20;font-family:monospace;font-size:11px;}
+.pip-box{position:absolute;top:54px;right:12px;width:380px;height:220px;border:2px solid #38bdf8;border-radius:6px;background:#020617;overflow:hidden;z-index:60;box-shadow:0 10px 40px rgba(0,0,0,0.95);}
+#canvas-pip{width:100%;height:100%;display:block;}
+.pip-label{position:absolute;top:6px;left:10px;background:rgba(15,23,42,0.9);padding:2px 8px;font-size:9px;font-weight:bold;color:#38bdf8;border-left:2px solid #38bdf8;}
+.hud-bottom{position:absolute;bottom:0;left:0;width:100%;height:75px;background:rgba(2,6,23,0.95);border-top:1px solid rgba(255,255,255,0.15);padding:8px 24px;display:flex;align-items:center;justify-content:space-between;z-index:20;}
+.telem-item{display:flex;flex-direction:column;}
+.telem-lbl{font-size:9px;color:#94a3b8;letter-spacing:1px;}
+.telem-val{font-size:clamp(14px,1.8vw,18px);font-weight:900;font-family:monospace;color:#f8fafc;}
+.banner{display:none;position:absolute;top:150px;left:50%;transform:translateX(-50%);padding:22px 36px;border-radius:8px;z-index:80;text-align:center;}
+.banner-rud{background:rgba(153,27,27,0.95);border:2px solid #ef4444;box-shadow:0 0 60px rgba(239,68,68,0.8);}
+.banner-success{background:rgba(6,78,59,0.95);border:2px solid #10b981;box-shadow:0 0 60px rgba(16,185,129,0.8);}
+</style></head>
+<body>
+<canvas id="canvas-main"></canvas>
+<div class="pip-box" id="pip-container">
+    <canvas id="canvas-pip"></canvas>
+    <div class="pip-label" id="pip-status">CAM 02: DESTINATION GATE OBSERVATORY</div>
+</div>
+<div class="hud-top">
+    <div>SHIP: <strong id="h-ship" style="color:#38bdf8;">HYPER-VESSEL</strong> | PHASE: <strong id="h-phase" style="color:#f59e0b;">INSPECTION</strong></div>
+    <div>TEMP: <strong id="h-temp" style="color:#ef4444;">300 K</strong> | SHIP TIME: <strong id="h-stime">00:00.0</strong> | EARTH TIME: <strong id="h-etime">00:00.0</strong></div>
+</div>
+<div class="banner banner-rud" id="b-rud">
+    <div style="font-size:18px;font-weight:900;color:#fff;">🚨 SPACETIME DISASTER / RUD OCCURRED 🚨</div>
+    <div id="rud-text" style="font-size:12px;margin-top:8px;color:#fecaca;"></div>
+</div>
+<div class="banner banner-success" id="b-success">
+    <div style="font-size:20px;font-weight:900;color:#6ee7b7;">🎉 DESTINATION REACHED & CAPTURED 🎉</div>
+    <div style="font-size:12px;margin-top:6px;color:#ecfdf5;">GATE MAGNETIC DECELERATION LOCK SUCCESSFUL</div>
+</div>
+<div class="hud-bottom">
+    <div class="telem-item"><div class="telem-lbl">WARP VELOCITY</div><div class="telem-val"><span id="t-vc">0.00</span> <span style="font-size:10px;color:#94a3b8;">c (Light Speed)</span></div></div>
+    <div class="telem-item"><div class="telem-lbl">PROGRESS TO DESTINATION</div><div class="telem-val"><span id="t-dist">0.0</span> <span style="font-size:10px;color:#94a3b8;">%</span></div></div>
+    <div class="telem-item"><div class="telem-lbl">INERTIAL ACCELERATION</div><div class="telem-val"><span id="t-g">0.0</span> <span style="font-size:10px;color:#94a3b8;">G (Compensated)</span></div></div>
+    <div class="telem-item"><div class="telem-lbl">TIME DILATION FACTOR (γ)</div><div class="telem-val"><span id="t-gamma">1.00</span> <span style="font-size:10px;color:#94a3b8;">x</span></div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded',()=>{
+try{
+const data=__SIM_DATA__;const cfg=__SIM_CFG__;const failReason="__FAIL_MSG__";
+const cMain=document.getElementById('canvas-main'),cPip=document.getElementById('canvas-pip');
+const wMain=window.innerWidth,hMain=window.innerHeight;
+
+// --- Three.js レンダラー構築 ---
+const rMain=new THREE.WebGLRenderer({canvas:cMain,antialias:true});rMain.setSize(wMain,hMain);rMain.toneMapping=THREE.ACESFilmicToneMapping;
+const rPip=new THREE.WebGLRenderer({canvas:cPip,antialias:true});rPip.setSize(380,220);
+const scene=new THREE.Scene();
+
+const camMain=new THREE.PerspectiveCamera(35,wMain/hMain,0.5,100000);
+const camPip=new THREE.PerspectiveCamera(25,380/220,1.0,100000);
+
+const lightSun=new THREE.DirectionalLight(0xffffff,3.5);lightSun.position.set(500,800,400);scene.add(lightSun);
+scene.add(new THREE.AmbientLight(0x1e293b,1.5));
+const coreGlowLight=new THREE.PointLight(cfg.core_glow,0.0,300);scene.add(coreGlowLight);
+
+// --- Web Audio SF音響シンセシス ---
+const AudioCtx=window.AudioContext||window.webkitAudioContext;let actx=null,warpOsc=null,subBass=null;
+function initAudio(){
+    if(!actx){
+        actx=new AudioCtx();
+        warpOsc=actx.createOscillator();warpOsc.type='sawtooth';
+        const wFilter=actx.createBiquadFilter();wFilter.type='bandpass';wFilter.frequency.value=800;wFilter.Q.value=4.0;
+        const wGain=actx.createGain();wGain.gain.value=0.0001;
+        warpOsc.connect(wFilter);wFilter.connect(wGain);wGain.connect(actx.destination);warpOsc.start(0);
+
+        const subOsc=actx.createOscillator();subOsc.type='sine';subOsc.frequency.value=38;
+        subBass=actx.createGain();subBass.gain.value=0.0001;
+        subOsc.connect(subBass);subBass.connect(actx.destination);subOsc.start(0);
+    }
+    if(actx.state==='suspended')actx.resume();
+}
+window.addEventListener('click',initAudio,{once:true});
+
+// --- 星間空間・星々（ワープストレッチ表現） ---
+const starGeo=new THREE.BufferGeometry(),starCount=4500;
+const starPos=new Float32Array(starCount*3);
+for(let i=0;i<starCount*3;i+=3){starPos[i]=(Math.random()-0.5)*12000;starPos[i+1]=(Math.random()-0.5)*12000;starPos[i+2]=(Math.random()-0.5)*18000;}
+starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+const starMat=new THREE.PointsMaterial({color:0xffffff,size:2.5,transparent:true,opacity:0.85});
+const starField=new THREE.Points(starGeo,starMat);scene.add(starField);
+
+// --- 船体ビークルモデリング（基本図形によるプロシージャル構築） ---
+const shipGroup=new THREE.Group();scene.add(shipGroup);
+const hullMat=new THREE.MeshStandardMaterial({color:cfg.hull_color,roughness:cfg.roughness,metalness:cfg.metalness});
+const coreMat=new THREE.MeshBasicMaterial({color:cfg.core_glow});
+const radiatorMat=new THREE.MeshStandardMaterial({color:0x111111,emissive:0xff2200,emissiveIntensity:0.0});
+
+let ring1=null,ring2=null,wings=[],trimaranNacelles=[],ramenBowl=null;
+
+if(cfg.chassis_id==='ring_cruiser'){
+    // ① ワープリング艦
+    const hull=new THREE.Mesh(new THREE.ConeGeometry(3.5,24,16),hullMat);hull.rotation.x=Math.PI/2;shipGroup.add(hull);
+    ring1=new THREE.Mesh(new THREE.TorusGeometry(8.5,0.45,16,64),coreMat);ring1.position.z=-2;shipGroup.add(ring1);
+    ring2=new THREE.Mesh(new THREE.TorusGeometry(9.5,0.35,16,64),hullMat);ring2.position.z=-4;shipGroup.add(ring2);
+}else if(cfg.chassis_id==='solar_valkyrie'){
+    // ② ソーラー・ヴァルキリー
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.8,1.6,22,16),hullMat);body.rotation.x=Math.PI/2;shipGroup.add(body);
+    for(let i=0;i<6;i++){
+        const sail=new THREE.Mesh(new THREE.PlaneGeometry(16,32),new THREE.MeshStandardMaterial({color:0xfde047,metalness:0.95,roughness:0.1,side:THREE.DoubleSide}));
+        sail.position.set(Math.cos(i/6*Math.PI*2)*3.0,Math.sin(i/6*Math.PI*2)*3.0,-6);
+        sail.rotation.z=(i/6)*Math.PI*2;shipGroup.add(sail);wings.push(sail);
+    }
+}else if(cfg.chassis_id==='monolith'){
+    // ③ 重力制御モノリス
+    const topPyramid=new THREE.Mesh(new THREE.ConeGeometry(5,14,4),hullMat);topPyramid.position.z=7;topPyramid.rotation.x=Math.PI/2;shipGroup.add(topPyramid);
+    const botPyramid=new THREE.Mesh(new THREE.ConeGeometry(5,14,4),hullMat);botPyramid.position.z=-7;botPyramid.rotation.x=-Math.PI/2;shipGroup.add(botPyramid);
+    const centerCore=new THREE.Mesh(new THREE.SphereGeometry(3.2,32,32),new THREE.MeshBasicMaterial({color:0x000000}));shipGroup.add(centerCore);
+}else if(cfg.chassis_id==='longinus'){
+    // ④ ロンギヌス突撃艇
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.4,36,8),hullMat);barrel.rotation.x=Math.PI/2;shipGroup.add(barrel);
+    for(let side of [-1,1]){
+        const armor=new THREE.Mesh(new THREE.BoxGeometry(1.2,2.5,24),radiatorMat);armor.position.set(side*2.2,0,-4);shipGroup.add(armor);wings.push(armor);
+    }
+}else if(cfg.chassis_id==='trimaran'){
+    // ⑤ トリマラン
+    const centerHull=new THREE.Mesh(new THREE.BoxGeometry(4.5,2.5,22),hullMat);shipGroup.add(centerHull);
+    for(let side of [-1,1]){
+        const nacelle=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.8,18,12),hullMat);nacelle.rotation.x=Math.PI/2;
+        nacelle.position.set(side*7.5,0,-2);shipGroup.add(nacelle);trimaranNacelles.push(nacelle);
+    }
+}else if(cfg.chassis_id==='ramen_cart'){
+    // ⑥ 屋台ラーメン
+    ramenBowl=new THREE.Mesh(new THREE.CylinderGeometry(3.5,2.0,3.2,16),new THREE.MeshStandardMaterial({color:0xd97706,roughness:0.8}));ramenBowl.position.y=1.5;shipGroup.add(ramenBowl);
+    const noren=new THREE.Mesh(new THREE.BoxGeometry(5.2,2.8,4.2),hullMat);noren.position.y=4.5;shipGroup.add(noren);
+    const lantern=new THREE.Mesh(new THREE.SphereGeometry(1.2,12,12),new THREE.MeshBasicMaterial({color:0xef4444}));lantern.position.set(2.8,4.0,2.2);shipGroup.add(lantern);
+}
+
+// 展開放熱翼
+const radPanels=[];
+for(let r=0;r<cfg.radiator_wings;r++){
+    const ang=(r/cfg.radiator_wings)*Math.PI*2;
+    const radP=new THREE.Mesh(new THREE.BoxGeometry(0.12,4.8,10.0),radiatorMat);
+    radP.position.set(Math.cos(ang)*2.6,Math.sin(ang)*2.6,-8);radP.rotation.z=ang;shipGroup.add(radP);radPanels.push(radP);
+}
+
+// --- 目的地の惑星＆ゲート ---
+const destGroup=new THREE.Group();destGroup.position.set(0,0,14000);scene.add(destGroup);
+const planetMesh=new THREE.Mesh(new THREE.SphereGeometry(850,48,48),new THREE.MeshStandardMaterial({color:cfg.dest_color,roughness:0.8}));
+destGroup.add(planetMesh);
+if(cfg.dest_type==='saturn'){
+    const ringMesh=new THREE.Mesh(new THREE.RingGeometry(1100,1800,64),new THREE.MeshStandardMaterial({color:0xa8a29e,side:THREE.DoubleSide}));
+    ringMesh.rotation.x=Math.PI/2.4;destGroup.add(ringMesh);
+}
+// 減速キャッチャー・ゲート
+const gateRing=new THREE.Mesh(new THREE.TorusGeometry(32,1.8,16,48),new THREE.MeshStandardMaterial({color:0x38bdf8,metalness:0.9,roughness:0.2}));
+gateRing.position.set(0,0,-1200);destGroup.add(gateRing);
+
+// --- アニメーションループ ---
+const tStart=performance.now();
+let isEnded=false;
+
+function renderFrame(now){
+    if(isEnded)return;requestAnimationFrame(renderFrame);
+    const elapsed=(now-tStart)/1000.0;
+    const curSimT=cfg.is_preview?0.0:elapsed*1.8;
+
+    let idx=0;while(idx<data.length-1&&data[idx+1].t<=curSimT)idx++;
+    const p=data[idx];
+
+    // 機体変形・自転アクション
+    if(ring1&&ring2){ring1.rotation.z+=0.04+p.v_c*0.25;ring2.rotation.z-=0.03+p.v_c*0.25;}
+    if(cfg.chassis_id==='solar_valkyrie'){wings.forEach((w,i)=>{w.scale.set(p.transform_morph,p.transform_morph,1);});}
+    if(cfg.chassis_id==='longinus'){wings.forEach((w,i)=>{w.position.x=(i===0?-1:1)*(2.2+p.transform_morph*1.5);});}
+    if(cfg.chassis_id==='trimaran'){trimaranNacelles.forEach((n,i)=>{n.rotation.z=(i===0?1:-1)*p.transform_morph*0.35;});}
+    if(ramenBowl){ramenBowl.rotation.y+=0.05;}
+
+    // 放熱翼の赤熱
+    const heatRatio=Math.min(2.5,Math.max(0.0,(p.heat_k-350.0)/1800.0));
+    radiatorMat.emissiveIntensity=heatRatio;
+
+    // ワープストレッチと機体進行
+    const currentZ=p.pos_ratio*12800;
+    shipGroup.position.set(0,0,currentZ);
+
+    if(p.phase==="WARP_CRUISE"){
+        shipGroup.scale.set(1.0,1.0,1.0+p.v_c*3.5);
+        camMain.fov=THREE.MathUtils.lerp(camMain.fov,75.0,0.1);
+        if(warpOsc&&actx){warpOsc.frequency.setTargetAtTime(400+p.v_c*1200,actx.currentTime,0.1);subBass.gain.setTargetAtTime(0.85,actx.currentTime,0.1);}
+    }else{
+        shipGroup.scale.set(1.0,1.0,1.0);
+        camMain.fov=THREE.MathUtils.lerp(camMain.fov,35.0,0.08);
+        if(subBass&&actx){subBass.gain.setTargetAtTime(0.0001,actx.currentTime,0.2);}
+    }
+    camMain.updateProjectionMatrix();
+
+    // 💥 RUD 描画エフェクト
+    if(p.exploded){
+        if(document.getElementById('b-rud').style.display!=='block'){
+            document.getElementById('b-rud').style.display='block';
+            document.getElementById('rud-text').innerText=p.rud_reason||failReason;
+        }
+        if(p.rud_reason&&p.rud_reason.includes("アコーディオン")){
+            shipGroup.scale.z=0.03;shipGroup.scale.x=2.5;shipGroup.scale.y=2.5;
+        }else{
+            shipGroup.scale.set(0.001,0.001,0.001);
+        }
+    }
+
+    if(p.phase==="ARRIVED"&&document.getElementById('b-success').style.display!=='block'){
+        document.getElementById('b-success').style.display='block';
+    }
+
+    // カメラワーク
+    camMain.position.set(0,18+p.v_c*10,currentZ-55-p.v_c*30);
+    camMain.lookAt(0,0,currentZ+30);
+
+    // CAM 02（目的地ゲート待ち受けカメラ）
+    camPip.position.set(0,40,12600);
+    camPip.lookAt(shipGroup.position);
+    rPip.render(scene,camPip);
+
+    // メイン描画
+    rMain.render(scene,camMain);
+
+    // テレメトリHUD更新
+    document.getElementById('h-phase').innerText=p.phase;
+    document.getElementById('h-temp').innerText=`${Math.round(p.heat_k)} K`;
+    document.getElementById('h-stime').innerText=`T+ ${p.ship_time.toFixed(1)}s`;
+    document.getElementById('h-etime').innerText=`T+ ${p.earth_time.toFixed(1)}s`;
+    document.getElementById('t-vc').innerText=p.v_c.toFixed(3);
+    document.getElementById('t-dist').innerText=(p.pos_ratio*100.0).toFixed(1);
+    document.getElementById('t-g').innerText=p.effective_g.toFixed(1);
+    const gamma=1.0/Math.sqrt(Math.max(0.001,1.0-Math.min(0.999,p.v_c)**2));
+    document.getElementById('t-gamma').innerText=gamma.toFixed(2);
+}
+requestAnimationFrame(renderFrame);
+
+window.addEventListener('resize',()=>{
+    const w=window.innerWidth,h=window.innerHeight;
+    rMain.setSize(w,h);camMain.aspect=w/h;camMain.updateProjectionMatrix();
+});
+}catch(e){console.error(e);}
+});
+</script></body></html>"""
+
+final_app_html = (
+    html_code.replace("__SIM_DATA__", sim_json)
+    .replace("__SIM_CFG__", cfg_json)
+    .replace("__FAIL_MSG__", fail_msg_safe)
+)
+
+components.html(final_app_html, height=880)
+
+if warp_engage:
+  st.markdown("---")
+  st.markdown("### 📋 航法ログ・タイムディレーション詳細")
+  if sim_error:
+    st.error(f"⚠️ **時空災害 (RUD) 発生**: {sim_error}")
+  else:
+    st.success(
+        "🎉 **減速ゲート捕捉成功**: 目的宙域の軌道ステーションへの進入を確認。"
+    )
