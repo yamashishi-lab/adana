@@ -190,7 +190,7 @@ with tab4:
         )
 
 # =========================================================================
-# 💥 タイムライン物理データ（虚無の待ち時間解消・テンポ最適化）
+# 💥 タイムライン物理データ（映画的25秒濃縮テンポ）
 # =========================================================================
 def build_timeline(preview_only=False):
     if preview_only:
@@ -433,7 +433,7 @@ sim_config = {
 }
 
 # =========================================================================
-# 📺 Three.js 完全映画仕様・極限細密＆ド迫力チェイス版 (Apex VFX Cinema Edition V4)
+# 📺 Three.js 完全映画仕様・極限細密＆ド迫力チェイス版 (Apex VFX Cinema Edition V5)
 # =========================================================================
 html_code = """<!DOCTYPE html>
 <html>
@@ -468,7 +468,15 @@ body,html{
 .hud-group{display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;letter-spacing:1px;}
 .badge{background:rgba(14,165,233,0.18);border:1px solid #38bdf8;color:#38bdf8;padding:2px 8px;border-radius:3px;font-weight:800;}
 
-/* ★修正: 16:9比率の映画中継サブモニターワイプ枠（右上固定配置） */
+/* 英語字幕ライブティッカー */
+#subtitle-box{
+  position:absolute;bottom:156px;left:20px;
+  background:rgba(2,6,23,0.88);border-left:3px solid #10b981;
+  padding:6px 14px;border-radius:3px;font-size:11px;font-family:monospace;
+  color:#6ee7b7;letter-spacing:1.2px;box-shadow:0 4px 15px rgba(0,0,0,0.8);
+  pointer-events:none;z-index:50;transition:opacity 0.3s;
+}
+
 .pip-window{
   position:absolute;top:70px;right:18px;
   width:360px;height:202px;
@@ -548,6 +556,8 @@ body,html{
     </div>
   </div>
 </div>
+
+<div id="subtitle-box">COMMS // READY FOR SYSTEM INITIALIZATION</div>
 
 <div id="pip-box" class="pip-window" title="クリックでサブモニター折りたたみ">
   <div class="pip-scan"></div>
@@ -641,7 +651,6 @@ scene.fog = new THREE.FogExp2(baseFogColor, cfg.env.fog_density);
 const cameraMain = new THREE.PerspectiveCamera(46, W / H, 0.5, 950000);
 const cameraPip = new THREE.PerspectiveCamera(36, 16 / 9, 0.5, 950000);
 
-// ★修正: 機体とバーナーを画面中央に美しく収める完璧なシネマチェイス座標
 let baseCamPos = new THREE.Vector3(-18.0, 7.5, -46.0);
 let baseTarget = new THREE.Vector3(0.0, 1.0, -2.0);
 
@@ -837,11 +846,24 @@ window.addEventListener('resize', () => {
 });
 
 // =========================================================================
-// 2. 音声合成キュー制御・Web Audioシンセビープ＆ソニックブーム
+// 2. ネイティブ英語音声合成＆字幕ティッカー＆Web Audioシンセ
 // =========================================================================
 let actx = null, rocketGain = null, rocketFilter = null, coilOsc = null, coilGain = null, warpOsc = null, warpGain = null, rcsGain = null;
 let lastAnnouncedPhase = "";
 let hasTriggeredBoom = false;
+let availableVoices = [];
+
+function updateVoiceList() {
+    if ('speechSynthesis' in window) {
+        availableVoices = window.speechSynthesis.getVoices();
+    }
+}
+if ('speechSynthesis' in window) {
+    updateVoiceList();
+    window.speechSynthesis.onvoiceschanged = updateVoiceList;
+}
+
+const subtitleEl = document.getElementById('subtitle-box');
 
 function playRadioBeep() {
     if (!actx) return;
@@ -862,11 +884,22 @@ function playRadioBeep() {
 
 function speakCallout(text) {
     playRadioBeep();
+    if (subtitleEl) {
+        subtitleEl.innerText = `COMMS // "${text}"`;
+        subtitleEl.style.opacity = '1.0';
+    }
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         setTimeout(() => {
             const u = new SpeechSynthesisUtterance(text);
-            u.rate = 1.05; u.pitch = 1.1; u.volume = 0.85;
+            u.lang = 'en-US';
+            if (availableVoices.length === 0) availableVoices = window.speechSynthesis.getVoices();
+            const enVoice = availableVoices.find(v => (v.lang === 'en-US' || v.lang === 'en_US') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('David')))
+                         || availableVoices.find(v => v.lang.startsWith('en'));
+            if (enVoice) u.voice = enVoice;
+            u.rate = 1.05;
+            u.pitch = 1.0;
+            u.volume = 0.92;
             window.speechSynthesis.speak(u);
         }, 15);
     }
@@ -1472,7 +1505,7 @@ for (let r = 0; r < cfg.radiator_fins; r++) {
     radiatorPanels.push({ pivot: rPivot, side: s });
 }
 
-// エンジン＆推力偏向ジンバル根元
+// エンジン＆推力偏向ジンバル
 const nozzleGimbalRoot = new THREE.Group();
 nozzleGimbalRoot.position.set(0, 0, -14.2);
 shipMeshGroup.add(nozzleGimbalRoot);
@@ -1604,7 +1637,6 @@ const sparkMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: tru
 const sparkLines = new THREE.LineSegments(sparkGeo, sparkMat);
 shipMeshGroup.add(sparkLines);
 
-// 推進バーナー炎
 const plumeRoot = new THREE.Group();
 plumeRoot.position.set(0, 0, -2.3);
 nozzleGimbalRoot.add(plumeRoot);
@@ -1671,7 +1703,6 @@ for (let d = 0; d < cfg.shock_count; d++) {
     shockBarrels.push(barrel);
 }
 
-// 連射されるプラズマパルス渦輪
 const pulseRings = [];
 for (let pr = 0; pr < 6; pr++) {
     const pRing = new THREE.Mesh(
@@ -1724,9 +1755,7 @@ holoHudSprite.scale.set(8.5, 4.25, 1.0);
 holoHudSprite.position.set(0, 3.8, 8.0);
 shipMeshGroup.add(holoHudSprite);
 
-// =========================================================================
-// ★魔改造: 常時稼働ハイスピード・スペースダスト＆近景光速ストリーク粒子群
-// =========================================================================
+// 常時稼働スペースダスト
 const dustCount = 650;
 const dustGeo = new THREE.BufferGeometry();
 const dustPos = new Float32Array(dustCount * 6);
@@ -1742,7 +1771,7 @@ const dustMat = new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true
 const ambientSpaceDust = new THREE.LineSegments(dustGeo, dustMat);
 scene.add(ambientSpaceDust);
 
-// ★魔改造: 連続通過する3Dホログラム空間誘導ゲート群
+// 連続通過する3Dホログラム空間誘導ゲート
 const waypointRingCount = 12;
 const waypointRings = [];
 for (let wr = 0; wr < waypointRingCount; wr++) {
@@ -1754,7 +1783,7 @@ for (let wr = 0; wr < waypointRingCount; wr++) {
     waypointRings.push(ringMesh);
 }
 
-// ★魔改造: ワープ時空曲率ワイヤーフレーム・グリッド
+// ワープ時空曲率ワイヤーフレーム・グリッド
 const warpGridMat = new THREE.ShaderMaterial({
     vertexShader: `
         varying vec2 vUv;
@@ -2285,7 +2314,7 @@ function drawRadar(prog, vc, mach, altKm) {
 }
 
 // =========================================================================
-// 10. 60fps アニメーションループ（ド迫力チェイス・天体機体100%捕捉CAM02）
+// 10. 60fps アニメーションループ（暗転解消・宣言順序完全整合・CAM02同期）
 // =========================================================================
 const startTime = performance.now();
 const pipTitleEl = document.getElementById('pip-title');
@@ -2305,6 +2334,7 @@ function animate(now) {
     const alpha = dt > 0.0001 ? THREE.MathUtils.clamp((simTime - f0.t) / dt, 0.0, 1.0) : 0.0;
     const L = (k) => THREE.MathUtils.lerp(f0[k], f1[k], alpha);
 
+    // ★修正: すべての補間変数を関数の先頭で確実に取得（宣言前参照エラーを根絶）
     const distM = L('dist_m');
     const altKm = L('alt_km');
     const mach = L('mach');
@@ -2315,7 +2345,22 @@ function animate(now) {
     const prog = L('progress');
     const tempK = L('temp_k');
     const gLoad = L('g');
+    const engPwr = L('engine_power');
+    const rcsBurst = L('rcs_burst');
+    const vAlpha = L('vapor_alpha');
+    const pAlpha = L('plasma_alpha');
+    const sArc = L('spark_arc');
+    const wCharge = L('warp_charge');
+    const wAct = L('warp_active');
+    const wBoom = L('warp_boom');
+    const wLens = L('warp_lens');
+    const nozVal = L('nozzle_open');
+    const bayVal = L('bay_open');
+    const sabotP = L('sabot_purge');
+    const fairingP = L('fairing_purge');
+    const tLock = L('tether_lock');
 
+    // ネイティブ英語音声コールアウト
     if (f0.phase !== lastAnnouncedPhase) {
         lastAnnouncedPhase = f0.phase;
         if (f0.phase === "CATAPULT_RAIL_ACCEL") speakCallout("Magnetic catapult engaged. Maximum acceleration.");
@@ -2328,14 +2373,10 @@ function animate(now) {
 
     const slowShake = Math.sin(now * 0.003) * Math.cos(now * 0.002) * 1.8;
     const fastShake = (Math.sin(now * 0.055) + Math.cos(now * 0.085)) * vib * 0.8;
-
-    // ★修正: 加速時に機体がグンと前へ飛び出すラバーバンド・スプリングカメラ
-    const engPwr = L('engine_power');
     const gLag = Math.min(26.0, gLoad * 1.6 + engPwr * 8.0);
 
     let effectiveCam = activeCamMode;
     if (activeCamMode === 0) {
-        // ★修正: 映画的カット割り（上昇中・ワープ中も大迫力チェイスを維持）
         if (f0.phase.includes("STANDBY") || f0.phase.includes("CHARGE")) effectiveCam = 1;
         else if (f0.phase === "CATAPULT_RAIL_ACCEL") effectiveCam = (simTime < 1.6) ? 4 : 1;
         else if (f0.phase.includes("CLIMB") || f0.phase.includes("INSERTION")) effectiveCam = 1;
@@ -2348,19 +2389,19 @@ function animate(now) {
     const shipWorldPos = new THREE.Vector3();
     shipMeshGroup.getWorldPosition(shipWorldPos);
 
-    if (effectiveCam === 1) { // メインチェイス（機体とバーナー炎が完璧に画面中央）
+    if (effectiveCam === 1) {
         const dynTargetZ = THREE.MathUtils.lerp(-2.0, -8.0, engPwr);
         cameraMain.position.x = baseCamPos.x + slowShake * 0.35;
         cameraMain.position.y = baseCamPos.y + slowShake * 0.25;
         cameraMain.position.z = baseCamPos.z - gLag + fastShake;
         cameraMain.lookAt(0.0, baseTarget.y, dynTargetZ);
-    } else if (effectiveCam === 2) { // コックピット視点
+    } else if (effectiveCam === 2) {
         cameraMain.position.set(shipWorldPos.x, shipWorldPos.y + 1.25, shipWorldPos.z + 8.2);
         cameraMain.lookAt(shipWorldPos.x, shipWorldPos.y + 1.25, shipWorldPos.z + 140.0);
-    } else if (effectiveCam === 3) { // 翼端マウント至近観察
+    } else if (effectiveCam === 3) {
         cameraMain.position.set(shipWorldPos.x - (halfSpan + 2.5), shipWorldPos.y + 1.2, shipWorldPos.z - 4.5);
         cameraMain.lookAt(shipWorldPos.x, shipWorldPos.y + 0.5, shipWorldPos.z);
-    } else if (effectiveCam === 4) { // フライバイ定点追跡
+    } else if (effectiveCam === 4) {
         cameraMain.position.set(38.0, 18.0, 140.0 - (f0.phase === "DEBRIS_RETRO_BRAKING" ? 0 : distM * 0.02));
         cameraMain.lookAt(shipWorldPos);
     }
@@ -2384,7 +2425,7 @@ function animate(now) {
         );
     }
 
-    // ★魔改造: 推力偏向ノズルの首振り連動
+    // 推力偏向ノズル
     nozzleGimbalRoot.rotation.x = THREE.MathUtils.degToRad(pitchDeg > 5 ? -6.0 : 0.0);
     nozzleGimbalRoot.rotation.y = THREE.MathUtils.degToRad(Math.sin(now * 0.05) * 4.0 * (rcsBurst > 0.1 ? 2.0 : 0.5));
 
@@ -2395,9 +2436,9 @@ function animate(now) {
     flameShaderMat.uniforms.uTime.value = elapsed;
     vaporShaderMat.uniforms.uTime.value = elapsed;
     warpGridMat.uniforms.uTime.value = elapsed;
-    warpGridMat.uniforms.uAlpha.value = THREE.MathUtils.lerp(0.0, 0.85, L('warp_charge'));
+    warpGridMat.uniforms.uAlpha.value = THREE.MathUtils.lerp(0.0, 0.85, wCharge);
 
-    // ★魔改造: 近景スペースダストの超高速スクロール
+    // 近景スペースダスト
     const speedRatio = THREE.MathUtils.clamp((mach / 40.0) + (vc * 8.0), 0.08, 12.0);
     const dArr = dustGeo.attributes.position.array;
     for (let i = 0; i < dustCount; i++) {
@@ -2408,7 +2449,7 @@ function animate(now) {
     }
     dustGeo.attributes.position.needsUpdate = true;
 
-    // ★魔改造: 連続通過する3Dホログラム空間誘導ゲートの高速前進
+    // 空間誘導ゲート
     for (let wr = 0; wr < waypointRingCount; wr++) {
         const ring = waypointRings[wr];
         let rz = ring.position.z - speedRatio * 4.2;
@@ -2444,11 +2485,9 @@ function animate(now) {
         sonicBoomDiscMat.opacity = 0.0;
     }
 
-    const vAlpha = L('vapor_alpha');
     vaporShaderMat.uniforms.uAlpha.value = vAlpha * 0.75;
     wingtipVortices.forEach(v => { v.mat.opacity = vAlpha * 0.85; });
 
-    const pAlpha = L('plasma_alpha');
     plasmaBowMat.opacity = pAlpha * 0.85;
     leadingEdgeMat.opacity = pAlpha * 0.95;
     sparkMat.opacity = pAlpha > 0.1 ? 0.85 : 0.0;
@@ -2465,7 +2504,6 @@ function animate(now) {
         matHull.emissiveIntensity = 0.0;
     }
 
-    const sArc = L('spark_arc');
     if (sArc > 0.05 && f0.phase === "CATAPULT_RAIL_ACCEL") {
         arcLineMat.opacity = 0.95;
         arcLight.intensity = 3.5 + Math.random() * 4.0;
@@ -2480,7 +2518,7 @@ function animate(now) {
         arcLight.intensity = 0.0;
     }
 
-    warpPass.uniforms.uDistort.value = L('warp_boom') * 2.8 + L('warp_active') * 0.35;
+    warpPass.uniforms.uDistort.value = wBoom * 2.8 + wAct * 0.35;
     warpPass.uniforms.uTime.value = elapsed;
     warpPass.uniforms.uDroplets.value = (altKm < 8.0 && simTime > 0.0) ? 1.0 - (altKm / 8.0) : 0.0;
     warpPass.uniforms.uGForce.value = gLoad;
@@ -2526,7 +2564,6 @@ function animate(now) {
         jupiterFlyby.scale.setScalar(0.0001);
     }
 
-    const sabotP = L('sabot_purge');
     if (sabotP > 0.01) {
         sabotClamps.forEach(sc => {
             sc.mesh.position.x = sc.baseX + sc.side * Math.pow(sabotP, 2.0) * 14.0;
@@ -2536,7 +2573,6 @@ function animate(now) {
         });
     }
 
-    const fairingP = L('fairing_purge');
     if (fairingP > 0.01) {
         fairingPanels.forEach(fp => {
             const spread = Math.pow(fairingP, 2.0) * 35.0;
@@ -2548,7 +2584,6 @@ function animate(now) {
         });
     }
 
-    const bayVal = L('bay_open');
     wingPivots.forEach(wp => { wp.group.rotation.y = wp.side * L('wing_sweep') * 0.32; });
     bayDoors.forEach(bd => { bd.pivot.rotation.z = bd.side * bayVal * 1.35; });
     hydraulicPistons.forEach(hp => {
@@ -2562,15 +2597,12 @@ function animate(now) {
         if (cs.type === 'rudder') cs.mesh.rotation.y = Math.cos(now * 0.004) * 0.2;
     });
 
-    const nozVal = L('nozzle_open');
     irisPaddles.forEach(ip => { ip.rotation.x = -0.35 + nozVal * 0.48; });
     sealPaddles.forEach(sp => { sp.rotation.x = -0.35 + nozVal * 0.48; });
     nozzlePistonLinks.forEach(nl => { nl.scale.set(1.0, 1.0, 0.6 + nozVal * 0.8); });
 
-    const rcsBurst = L('rcs_burst');
     rcsJets.forEach(rj => { rj.mat.opacity = rcsBurst * 0.85; });
 
-    const wCharge = L('warp_charge');
     warpRingAssembly.position.y = -0.8 + L('ring_lift') * 4.2;
 
     rotorClockwise.rotation.z += 0.04 + wCharge * 0.45;
@@ -2593,8 +2625,8 @@ function animate(now) {
         }
     });
 
-    gravLensMat.uniforms.uAlpha.value = L('warp_lens');
-    accretionRing.material.opacity = L('warp_lens') * 0.95;
+    gravLensMat.uniforms.uAlpha.value = wLens;
+    accretionRing.material.opacity = wLens * 0.95;
     accretionRing.rotation.z += 0.08;
 
     if (f0.phase === "DEBRIS_RETRO_BRAKING") {
@@ -2622,7 +2654,6 @@ function animate(now) {
             sb.material.opacity = Math.max(0.1, 0.9 - atmoVacuumExpansion * 0.7);
         });
 
-        // パルス渦輪の連続射出アニメーション
         pulseRings.forEach((pr, pIdx) => {
             const pProg = (elapsed * 3.5 + pIdx * 0.16) % 1.0;
             pr.position.z = -pProg * 38.0;
@@ -2635,7 +2666,6 @@ function animate(now) {
         pulseRings.forEach(pr => { pr.material.opacity = 0.0; });
     }
 
-    const wAct = L('warp_active');
     warpGroup.scale.setScalar(wAct > 0.05 ? 1.0 : 0.0001);
     if (wAct > 0.05) {
         warpGroup.rotation.z += 0.035;
@@ -2666,7 +2696,6 @@ function animate(now) {
         destWorld.scale.setScalar(0.0001);
     }
 
-    const tLock = L('tether_lock');
     tetherMat.opacity = tLock * 0.85;
     if (tLock > 0.01) {
         for (let k = 0; k < 6; k++) {
@@ -2692,13 +2721,11 @@ function animate(now) {
         rocketGain.gain.setTargetAtTime(engPwr * (inAtmo ? 0.42 : 0.12) * duckingFactor, actx.currentTime, 0.08);
         rcsGain.gain.setTargetAtTime(rcsBurst * 0.18 * duckingFactor, actx.currentTime, 0.04);
         coilGain.gain.setTargetAtTime((f0.phase.includes("COIL") || f0.phase.includes("RAIL") ? 0.22 : 0.0001) * duckingFactor, actx.currentTime, 0.08);
-        warpGain.gain.setTargetAtTime((wAct * 0.38 + L('warp_lens') * 0.25) * duckingFactor, actx.currentTime, 0.1);
+        warpGain.gain.setTargetAtTime((wAct * 0.38 + wLens * 0.25) * duckingFactor, actx.currentTime, 0.1);
         warpOsc.frequency.setTargetAtTime(60 + vc * 380, actx.currentTime, 0.1);
     }
 
-    // =========================================================================
-    // ★修正: CAM 02（天体と機体が100%同軸に並ぶツーショット望遠フレーミング）
-    // =========================================================================
+    // CAM 02（機体＋天体ツーショットフレーミング）
     const recessionKms = vc > 0.01 ? (vc * 299792).toFixed(0) : (mach * 0.34).toFixed(1);
 
     if (f0.phase.includes("STANDBY") || f0.phase.includes("CHARGE")) {
@@ -2714,14 +2741,12 @@ function animate(now) {
     } else if (f0.phase.includes("CLIMB") || f0.phase.includes("INSERTION")) {
         pipTitleEl.innerText = "CAM 02: ONBOARD WING-MOUNT & EARTH DEPARTURE";
         pipMetricEl.innerText = `EARTH RECESSION: ${recessionKms} km/s | ALT: ${altKm.toFixed(0)} km`;
-        // 機体の斜め前方から機首と背後の巨大な地球を一直線に捉える構図
         cameraPip.position.set(8.5, 3.2, 18.0);
         cameraPip.lookAt(0, 0, -2000.0);
     } else if (f0.phase.includes("WARP")) {
         if (prog >= 0.30 && prog <= 0.48) {
             pipTitleEl.innerText = "CAM 02: MARS FLY-BY OPTICAL INTERCEPT";
             pipMetricEl.innerText = `VEL: ${vc.toFixed(3)} c | INTERCEPT TARGET: MARS`;
-            // 火星 ➔ 宇宙船 ➔ カメラを一直線上に配置（自機越しに火星を捉える）
             cameraPip.position.set(-16.0, 5.0, -22.0);
             cameraPip.lookAt(marsFlyby.position.x * 0.1, marsFlyby.position.y * 0.1, marsFlyby.position.z * 0.5);
         } else if (prog >= 0.60 && prog <= 0.78) {
@@ -2732,20 +2757,19 @@ function animate(now) {
         } else {
             pipTitleEl.innerText = "CAM 02: ALCUBIERRE WARP FIELD BOW SHOCK";
             pipMetricEl.innerText = `WARP: ${vc.toFixed(3)} c (${recessionKms} km/s) | LORENTZ: ${(1.0/Math.sqrt(Math.max(0.001,1.0-vc*vc))).toFixed(2)}x`;
-            // 斜め前方からワープボウショックと激突する機首をクローズアップ
             cameraPip.position.set(-8.5, 3.5, 22.0);
             cameraPip.lookAt(0, 0, -5.0);
         }
     } else {
         pipTitleEl.innerText = "CAM 02: STARGATE APPROACH & ARREST LOCK";
         pipMetricEl.innerText = `APPROACH: ${recessionKms} km/s | TETHER CAPTURE READY`;
-        // 機体の後方からスターゲートへ飛び込んでいく様子を一望
         cameraPip.position.set(0.0, 6.5, -28.0);
         cameraPip.lookAt(0, 0, 150.0);
     }
 
     drawRadar(prog, vc, mach, altKm);
 
+    // ★修正: ループ先頭でビューポート＆シザーを初期化してメイン画面を確実にフルスクリーン描画
     renderer.autoClear = true;
     renderer.setRenderTarget(null);
     renderer.setViewport(0, 0, W, H);
@@ -2761,6 +2785,10 @@ function animate(now) {
         renderer.autoClear = false;
         renderer.clearDepth();
         renderer.render(scene, cameraPip);
+
+        // ★修正: 次フレームのメイン描画が暗転・縮小しないよう即座にリセット
+        renderer.setScissorTest(false);
+        renderer.setViewport(0, 0, W, H);
     }
 
     document.getElementById('ui-phase').innerText = f0.phase;
@@ -2769,7 +2797,7 @@ function animate(now) {
     const sTime = L('t');
     document.getElementById('ui-clock').innerText = sTime < 0 ? `T${sTime.toFixed(1)}s` : `T+${L('ship_time').toFixed(1)}s`;
     document.getElementById('ui-vc').innerText = vc.toFixed(3);
-    document.getElementById('ui-temp').innerText = Math.round(L('temp_k'));
+    document.getElementById('ui-temp').innerText = Math.round(tempK);
     document.getElementById('ui-g').innerText = gLoad.toFixed(1);
     const gamma = 1.0 / Math.sqrt(Math.max(0.001, 1.0 - Math.min(0.999, vc) ** 2));
     document.getElementById('ui-gamma').innerText = gamma.toFixed(2);
