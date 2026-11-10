@@ -4,31 +4,31 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Hyper-Drive Architect: Apex Cinematic Edition",
+    page_title="Hyper-Drive Architect: Apex Cinematic 4K Pro",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-st.title("🛸 Hyper-Drive Architect: Apex WaveRider (Cinematic 4K SF Edition)")
+st.title("🛸 Hyper-Drive Architect: Apex WaveRider (Hard-SF Grand Tour 4K)")
 st.caption(
-    "※ 実写映画級ハードSF：相模湾都市夜景・富士山麓なだらか稜線・完全60fps Lerp補間・多重グロー発光・ハイパースペース光速トンネル・電磁フィールド着艦"
+    "※ 決定版：斜め後方ダイナミック俯瞰視点・プロシージャル精密メカ造形・球体地球リム大気・長距離ワープ突入閃光＆急接近演出"
 )
 
 # =========================================================================
-# 🔬 機体・動力炉・目的地・未来技術データベース
+# 🔬 機体・動力炉・目的地・天候データベース
 # =========================================================================
 VESSEL_DESIGNS = {
     "極超音速ウェイブライダー『ヴァルキリー SSTO』": {
         "id": "waverider_valkyrie",
         "style": "stealth_waverider",
         "catapult_mach": 14.5,
-        "desc": "チタン合金フレーム＋高密度カーボン耐熱層。軌道到達後に観音開き装甲が展開し、超伝導デュアルワープリングがせり出す次世代機。",
+        "desc": "チタン合金フレーム＋分割ステルス多面体。軌道上で背部装甲が観音開き展開し、超伝導デュアルワープリングがせり出す次世代機。",
     },
     "磁気慣性核融合クルーザー『プロメテウス』": {
         "id": "prometheus_cruiser",
         "style": "magnetic_fusion",
         "catapult_mach": 11.0,
-        "desc": "船尾に巨大なオープンフレーム露出トラス、球形He3燃料タンク、ソレノイド支柱を配置した重工業ディープスペース巡航艦。",
+        "desc": "船尾に巨大なオープンフレーム露出トラス、球形He3燃料タンク群、ソレノイド支柱を配置した重工業ディープスペース巡航艦。",
     },
     "電磁カタパルト迎撃槍『ロンギヌス・インターセプター』": {
         "id": "longinus_spear",
@@ -107,7 +107,7 @@ LAUNCH_ENVIRONMENTS = {
         "sun_pos": [-400, 2500, -1200],
         "sun_int": 1.4,
         "fog_color": 0x050C16,
-        "fog_density": 0.000030,
+        "fog_density": 0.000028,
     },
     "夜明け (マジックアワー / 富士朝焼け)": {
         "sky_top": "#030712",
@@ -117,7 +117,7 @@ LAUNCH_ENVIRONMENTS = {
         "sun_pos": [1500, 700, -800],
         "sun_int": 4.8,
         "fog_color": 0x1E293B,
-        "fog_density": 0.000025,
+        "fog_density": 0.000022,
     },
     "荒天・雷鳴成層圏突破 (Storm Thunder)": {
         "sky_top": "#050811",
@@ -127,7 +127,7 @@ LAUNCH_ENVIRONMENTS = {
         "sun_pos": [200, 1800, 300],
         "sun_int": 2.2,
         "fog_color": 0x111D30,
-        "fog_density": 0.000055,
+        "fog_density": 0.000045,
     },
 }
 
@@ -169,11 +169,11 @@ LAUNCH_CATAPULTS = {
 # 🎛️ パラメータ設定UI
 # =========================================================================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🛸 機体設計 & 航空宇宙マテリアル",
-    "🛡️ 外装装甲 & 補助装備モジュール",
+    "🛸 機体設計 & メカ構造",
+    "🛡️ 外装装甲 & 補助モジュール",
     "⚡ 地上射出 & 大気環境",
     "🌌 時空駆動炉 & ワープトポロジー",
-    "🎯 目的地航路 & カメラワーク",
+    "🎯 目的地航路 & フリップ減速",
 ])
 
 with tab1:
@@ -181,7 +181,7 @@ with tab1:
   with col1:
     vessel_sel = st.selectbox("ベース艦種 (Chassis)", list(VESSEL_DESIGNS.keys()))
     vessel_cfg = VESSEL_DESIGNS[vessel_sel]
-    hull_primary = st.color_picker("メイン構造体プライマリ配色", "#1e293b")
+    hull_primary = st.color_picker("チタン合金フレーム配色", "#1e293b")
     tile_color = st.color_picker("耐熱カーボン/MLI配色", "#0a0f1d")
   with col2:
     st.info(f"**艦種概要:** {vessel_cfg['desc']}")
@@ -242,6 +242,7 @@ with tab5:
     dest_sel = st.selectbox("到達目標宙域", list(DESTINATIONS.keys()))
     dest_cfg = DESTINATIONS[dest_sel]
     st.caption(f"**目的宙域距離:** {dest_cfg['dist_label']}")
+  with col2:
     flip_ratio = st.slider(
         "反転逆噴射 (フリップ＆バーン) 開始位置比率",
         0.55,
@@ -249,16 +250,7 @@ with tab5:
         0.75,
         step=0.01,
     )
-  with col2:
-    cam_mode = st.radio(
-        "カメラワーク・プリセット",
-        [
-            "シネマティック追尾 (黄金比チェイス・加速G振動)",
-            "フライバイ通過 (超音速通過・大迫力音速突破)",
-            "コックピット主観視点 (HUD密着・計器直結)",
-        ],
-        index=0,
-    )
+    st.caption("※ 航法AIが最適な減速Gカーブを自動計算し、100%確実にゲート内へ停止着艦します。")
 
 
 # =========================================================================
@@ -277,10 +269,11 @@ def run_simulation(preview_only=False):
         "temp_k": 293.0,
         "morph_ring": 0.0,
         "morph_wings": 0.0,
+        "purge_sabot": 0.0,
         "purge_booster": 0.0,
         "purge_fairing": 0.0,
         "rcs_active": False,
-        "warp_tunnel": 0.0,
+        "warp_flash": 0.0,
         "plasma_alpha": 0.0,
         "space_ratio": 0.0,
         "progress": 0.0,
@@ -313,10 +306,11 @@ def run_simulation(preview_only=False):
         "temp_k": 293.0,
         "morph_ring": 0.0,
         "morph_wings": 0.0,
+        "purge_sabot": 0.0,
         "purge_booster": 0.0,
         "purge_fairing": 0.0,
         "rcs_active": False,
-        "warp_tunnel": 0.0,
+        "warp_flash": 0.0,
         "plasma_alpha": 0.0,
         "space_ratio": 0.0,
         "progress": 0.0,
@@ -340,14 +334,17 @@ def run_simulation(preview_only=False):
   cur_mach = 0.0
   cur_vc = 0.0
   cur_progress = 0.0
+  purge_s = 0.0
   purge_b = 0.0
   purge_f = 0.0
+  warp_fl = 0.0
 
   for step in range(total_sim_steps):
     t = float(step * dt)
     rcs_on = False
     laser_on = False
     vapor = 0.0
+    warp_fl = max(0.0, warp_fl - 0.25 * dt)
 
     if t <= 3.0:
       phase = "RAIL_ACCELERATION"
@@ -358,7 +355,6 @@ def run_simulation(preview_only=False):
       plasma = 0.0
       morph_ring = 0.0
       morph_wings = 0.0
-      warp_tun = 0.0
       space_r = 0.0
       eng_on = False
       pitch_deg = catapult_cfg["angle_deg"]
@@ -378,9 +374,9 @@ def run_simulation(preview_only=False):
         plasma = 0.0
       morph_ring = 0.0
       morph_wings = min(1.0, (cur_alt / 80.0))
-      warp_tun = 0.0
       space_r = float(np.clip((cur_alt - 15.0) / 75.0, 0.0, 1.0))
       pitch_deg = float(catapult_cfg["angle_deg"] * (1.0 - space_r * 0.7))
+      purge_s = min(1.0, purge_s + 0.5 * dt)  # サボパージ
       if cur_alt >= 60.0 and aux_booster:
         purge_b = min(1.0, purge_b + 0.25 * dt)
     elif cur_progress < 0.06:
@@ -392,13 +388,14 @@ def run_simulation(preview_only=False):
       morph_wings = 1.0
       if vessel_cfg["style"] == "massdriver_spear":
         purge_f = min(1.0, purge_f + 0.2 * dt)
-      warp_tun = 0.0
       space_r = 1.0
       cur_g = 1.0
       cur_vc = 0.03
       cur_progress += 0.005
       pitch_deg = 0.0
       rcs_on = True
+      if cur_progress >= 0.055:
+        warp_fl = 1.0  # ワープ直前フラッシュ
     elif cur_progress < flip_ratio:
       phase = "WARP_CRUISE"
       eng_on = True
@@ -408,7 +405,6 @@ def run_simulation(preview_only=False):
       plasma = 0.0
       morph_ring = 1.0
       morph_wings = 1.0
-      warp_tun = float(min(1.0, cur_vc * 1.2))
       space_r = 1.0
       cur_progress += (cur_vc * 0.018) * dt
       pitch_deg = 0.0
@@ -422,7 +418,6 @@ def run_simulation(preview_only=False):
       plasma = 0.0
       morph_ring = max(0.2, cur_vc * 1.4)
       morph_wings = 1.0
-      warp_tun = float(cur_vc)
       space_r = 1.0
       cur_progress = min(1.0, cur_progress + (cur_vc * 0.013) * dt)
       pitch_deg = 180.0
@@ -444,10 +439,11 @@ def run_simulation(preview_only=False):
         "temp_k": float(temp_k),
         "morph_ring": float(morph_ring),
         "morph_wings": float(morph_wings),
+        "purge_sabot": float(purge_s),
         "purge_booster": float(purge_b),
         "purge_fairing": float(purge_f),
         "rcs_active": rcs_on,
-        "warp_tunnel": float(warp_tun),
+        "warp_flash": float(warp_fl),
         "plasma_alpha": float(plasma),
         "space_ratio": float(space_r),
         "progress": float(min(1.0, cur_progress)),
@@ -475,10 +471,11 @@ def run_simulation(preview_only=False):
             "temp_k": 310.0,
             "morph_ring": 0.0,
             "morph_wings": 1.0,
+            "purge_sabot": float(purge_s),
             "purge_booster": float(purge_b),
             "purge_fairing": float(purge_f),
             "rcs_active": False,
-            "warp_tunnel": 0.0,
+            "warp_flash": 0.0,
             "plasma_alpha": 0.0,
             "space_ratio": 1.0,
             "progress": 1.0,
@@ -534,7 +531,6 @@ client_config = {
     "aux_booster": aux_booster,
     "debris_laser": debris_laser,
     "shock_diamonds": shock_diamonds,
-    "cam_mode": cam_mode,
     "catapult_angle": catapult_cfg["angle_deg"],
     "catapult_len": catapult_cfg["rail_len"],
     "env": env_cfg,
@@ -562,9 +558,11 @@ html_markup = """<!DOCTYPE html><html><head><meta charset="utf-8">
 .banner{display:none;position:absolute;top:140px;left:50%;transform:translateX(-50%);padding:22px 36px;border-radius:8px;z-index:80;text-align:center;}
 .banner-success{background:rgba(6,78,59,0.95);border:2px solid #10b981;box-shadow:0 0 60px rgba(16,185,129,0.8);}
 .crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:25;opacity:0.25;}
+#flash-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:90;pointer-events:none;opacity:0.0;}
 </style></head>
 <body>
 <canvas id="canvas-viewport"></canvas>
+<div id="flash-overlay"></div>
 <div id="pip-click-box" class="pip-overlay" title="クリックでCAM 02の表示/非表示を切り替え">
     <div id="pip-tag" class="pip-tag">CAM 02: TRACKING SENSOR</div>
     <div id="pip-hint" class="pip-hint">[CLICK TO TOGGLE]</div>
@@ -608,6 +606,7 @@ const data=__SIM_DATA__;const cfg=__SIM_CFG__;
 const canvas=document.getElementById('canvas-viewport');
 let winW=window.innerWidth,winH=window.innerHeight;
 const pipBox=document.getElementById('pip-click-box'),topBannerBar=document.getElementById('top-banner-bar');
+const flashOverlay=document.getElementById('flash-overlay');
 let pipVisible=true;
 
 function updatePipPosition(){if(pipBox&&topBannerBar){const rect=topBannerBar.getBoundingClientRect();pipBox.style.top=Math.round(rect.bottom+4)+'px';}}
@@ -622,7 +621,7 @@ pipBox.addEventListener('click',()=>{
     document.getElementById('pip-hint').innerText=pipVisible?'[CLICK TO HIDE]':'[CLICK TO SHOW]';
 });
 
-// 単一レンダラー (Viewport/Scissor分割でPiPを描画・GPU負荷半減)
+// 単一レンダラー (Viewport/Scissor分割でGPU負荷半減)
 const renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,powerPreference:"high-performance"});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
 renderer.setSize(winW,winH);
@@ -631,8 +630,8 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.
 const scene=new THREE.Scene();
 scene.fog=new THREE.FogExp2(cfg.env.fog_color,cfg.env.fog_density);
 
-const cameraMain=new THREE.PerspectiveCamera(38,winW/winH,0.5,120000);
-const cameraPip=new THREE.PerspectiveCamera(24,320/180,1.0,120000);
+const cameraMain=new THREE.PerspectiveCamera(38,winW/winH,0.5,150000);
+const cameraPip=new THREE.PerspectiveCamera(24,320/180,1.0,150000);
 
 const sunLight=new THREE.DirectionalLight(cfg.env.sun_color,cfg.env.sun_int);
 sunLight.position.set(cfg.env.sun_pos[0],cfg.env.sun_pos[1],cfg.env.sun_pos[2]);scene.add(sunLight);
@@ -695,7 +694,7 @@ function createAdvancedArmorTex(){
 }
 const armorTex=createAdvancedArmorTex();armorTex.wrapS=THREE.RepeatWrapping;armorTex.wrapT=THREE.RepeatWrapping;armorTex.repeat.set(6,6);
 
-// 先進マテリアル定義 (flatShadingは完全falseで滑らかな最新CG化)
+// 先進マテリアル定義 (滑らかな最新CG化)
 const armorMat=new THREE.MeshStandardMaterial({
     color:cfg.hull_color,
     roughness:cfg.armor_roughness,
@@ -706,6 +705,7 @@ const armorMat=new THREE.MeshStandardMaterial({
 });
 const carbonTileMat=new THREE.MeshStandardMaterial({color:cfg.tile_color,roughness:0.8,metalness:0.2,bumpMap:armorTex,bumpScale:0.03,flatShading:false});
 const goldFoilMat=new THREE.MeshStandardMaterial({color:0xd97706,roughness:0.35,metalness:0.95});
+const darkFrameMat=new THREE.MeshStandardMaterial({color:0x0f172a,metalness:0.9,roughness:0.3});
 const canopyMat=new THREE.MeshPhysicalMaterial({color:0x38bdf8,roughness:0.08,metalness:0.92,transparent:true,opacity:0.85,transmission:0.7});
 const coilGlowMat=new THREE.MeshBasicMaterial({color:0x38bdf8});
 const plasmaMat=new THREE.MeshBasicMaterial({color:cfg.plasma_hex,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
@@ -713,13 +713,13 @@ const laserMat=new THREE.MeshBasicMaterial({color:0x38bdf8,blending:THREE.Additi
 const radiatorMat=new THREE.MeshStandardMaterial({color:0x1e293b,metalness:0.9,roughness:0.2,emissive:0x000000,emissiveIntensity:0.0});
 
 // =========================================================================
-// 🗻 地上・相模湾都市夜景・富士山麓なだらか稜線の構築
+// 🗻 地上・相模湾都市夜景・リアル富士山麓 ＆ 巨大球体地球の構築
 // =========================================================================
 const groundGroup=new THREE.Group();scene.add(groundGroup);
 const ocean=new THREE.Mesh(new THREE.PlaneGeometry(80000,80000),new THREE.MeshStandardMaterial({color:0x081b2e,roughness:0.08,metalness:0.92}));
 ocean.rotation.x=-Math.PI/2;groundGroup.add(ocean);
 
-// 相模湾・都市夜景ライトグリッド (道路網＋無数の都市ナトリウム灯)
+// 相模湾・都市夜景ライトグリッド
 const cityLightsGeo=new THREE.BufferGeometry(),cityCount=4500;
 const cityPos=new Float32Array(cityCount*3),cityCols=new Float32Array(cityCount*3);
 for(let i=0;i<cityCount*3;i+=3){
@@ -750,7 +750,6 @@ const fujiGeo=new THREE.LatheGeometry(fujiCurvePts,48);
 const fujiMat=new THREE.MeshStandardMaterial({color:0x15202b,roughness:0.85});
 const fujiMesh=new THREE.Mesh(fujiGeo,fujiMat);fujiMesh.position.set(13000,0,-18000);groundGroup.add(fujiMesh);
 
-// 富士山冠雪
 const snowPts=[];
 for(let deg=14;deg<=20;deg++){
     const tNorm=deg/20.0;
@@ -768,7 +767,6 @@ const railSpine=new THREE.Mesh(new THREE.BoxGeometry(10,6,railLen3D),armorMat);
 railSpine.position.set(0,railLen3D*0.5*Math.sin(catAngleRad)+2.0,railLen3D*0.5*Math.cos(catAngleRad));
 railSpine.rotation.x=catAngleRad;railGroup.add(railSpine);
 
-// 海面トラス支柱群
 for(let p=0;p<12;p++){
     const pz=(p/12)*railLen3D*Math.cos(catAngleRad);
     const py=(p/12)*railLen3D*Math.sin(catAngleRad);
@@ -795,19 +793,48 @@ for(let ci=0;ci<40;ci++){
     cloudGroup.add(cp);
 }
 
+// ★軌道上に出現する超巨大「球体地球」＆青白いリム大気グロー
+const orbitalEarthGroup=new THREE.Group();scene.add(orbitalEarthGroup);
+orbitalEarthGroup.position.set(0,-12500,2000);
+const earthBody=new THREE.Mesh(new THREE.SphereGeometry(12000,64,64),new THREE.MeshStandardMaterial({color:0x0b2545,roughness:0.65,metalness:0.15}));
+orbitalEarthGroup.add(earthBody);
+const earthRim=new THREE.Mesh(new THREE.SphereGeometry(12120,64,64),new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.42,side:THREE.BackSide,blending:THREE.AdditiveBlending}));
+orbitalEarthGroup.add(earthRim);
+orbitalEarthGroup.visible=false;
+
 // =========================================================================
-// 🚀 先進宇宙船モジュール設計 (滑らかな最新CG造形)
+// 🚀 先進宇宙船モジュール設計 (プロシージャル・グリーブル精密メカ造形)
 // =========================================================================
 const vesselGroup=new THREE.Group();scene.add(vesselGroup);
 const slidingDorsalDoors=[],warpRingGroup=new THREE.Group();
-const radiatorMeshes=[],boosterMeshes=[],fairingMeshes=[];
+const radiatorMeshes=[],boosterMeshes=[],fairingMeshes=[],sabotMeshes=[];
 
+// プロシージャル・グリーブル（微小メカパーツ自動生成）
+function attachGreebles(targetGroup,count,radius,zRange){
+    const gGeo1=new THREE.BoxGeometry(0.3,0.3,1.2);
+    const gGeo2=new THREE.CylinderGeometry(0.12,0.12,1.6,8);
+    const gGeo3=new THREE.BoxGeometry(0.6,0.15,0.6);
+    for(let i=0;i<count;i++){
+        const ang=Math.random()*Math.PI*2;
+        const z=(Math.random()-0.5)*zRange;
+        const r=radius*(0.85+Math.random()*0.3);
+        const geo=i%3===0?gGeo1:(i%3===1?gGeo2:gGeo3);
+        const mat=i%4===0?goldFoilMat:darkFrameMat;
+        const gm=new THREE.Mesh(geo,mat);
+        gm.position.set(Math.cos(ang)*r,Math.sin(ang)*(r*0.5),z);
+        gm.rotation.set(Math.random()*0.5,Math.random()*0.5,Math.random()*Math.PI);
+        targetGroup.add(gm);
+    }
+}
+
+// 翼のExtrude化
 function createSharpWing(span){
     const s=new THREE.Shape();s.moveTo(0,5);s.lineTo(span*0.5,-5);s.lineTo(span*0.48,-9);s.lineTo(0,-13);s.closePath();
     const g=new THREE.ExtrudeGeometry(s,{depth:0.45,bevelEnabled:true,bevelThickness:0.18,bevelSize:0.7,bevelSegments:3});
     const m=new THREE.Mesh(g,armorMat);m.rotation.x=Math.PI/2;m.position.y=-0.2;return m;
 }
 
+// 船種別分岐ビルド
 if(cfg.style==="stealth_waverider"){
     const bGeo=new THREE.CylinderGeometry(1.2,4.8,26,24);bGeo.scale(1.8,0.45,1.0);
     const body=new THREE.Mesh(bGeo,armorMat);body.rotation.x=Math.PI/2;vesselGroup.add(body);
@@ -821,6 +848,7 @@ if(cfg.style==="stealth_waverider"){
         const door=new THREE.Mesh(new THREE.BoxGeometry(3.6,0.35,12),armorMat);door.position.set(side*2.2,1.2,-2.0);vesselGroup.add(door);
         slidingDorsalDoors.push({mesh:door,side:side});
     }
+    attachGreebles(vesselGroup,42,3.6,18.0);
 }else if(cfg.style==="magnetic_fusion"){
     const frontCab=new THREE.Mesh(new THREE.ConeGeometry(3.2,14,24),armorMat);frontCab.rotation.x=Math.PI/2;frontCab.position.z=7;vesselGroup.add(frontCab);
     const midHull=new THREE.Mesh(new THREE.BoxGeometry(6,5,16),armorMat);vesselGroup.add(midHull);
@@ -833,6 +861,7 @@ if(cfg.style==="stealth_waverider"){
         tank.position.set(Math.cos(ang)*2.4,Math.sin(ang)*1.8,-11);vesselGroup.add(tank);
     }
     vesselGroup.add(createSharpWing(cfg.wings_span*0.75));
+    attachGreebles(vesselGroup,48,3.8,16.0);
 }else{
     const coreSpike=new THREE.Mesh(new THREE.CylinderGeometry(0.6,2.2,34,24),goldFoilMat);coreSpike.rotation.x=Math.PI/2;vesselGroup.add(coreSpike);
     vesselGroup.add(createSharpWing(cfg.wings_span*0.5));
@@ -844,9 +873,10 @@ if(cfg.style==="stealth_waverider"){
         fairing.rotation.z=ang;vesselGroup.add(fairing);
         fairingMeshes.push({mesh:fairing,vx:Math.cos(ang)*14.0,vy:Math.sin(ang)*14.0});
     }
+    attachGreebles(vesselGroup,32,2.2,22.0);
 }
 
-// コックピット
+// キャノピー
 const canopy=new THREE.Mesh(new THREE.ConeGeometry(1.3,6.5,24),canopyMat);canopy.scale.set(1.0,0.45,1.8);canopy.rotation.x=Math.PI/2;canopy.position.set(0,0.8,8.0);vesselGroup.add(canopy);
 
 // 放熱ラジエーターフィン
@@ -855,7 +885,7 @@ for(let r=0;r<cfg.radiator_count;r++){
     rad.position.set(0,0.9,-4.0-(r*1.8));vesselGroup.add(rad);radiatorMeshes.push(rad);
 }
 
-// ブースター
+// 外装使い捨てブースター
 if(cfg.aux_booster){
     for(let bSide of [-1,1]){
         const bMesh=new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.9,14,24),carbonTileMat);
@@ -864,31 +894,41 @@ if(cfg.aux_booster){
     }
 }
 
+// 電磁カタパルト固定サボアーム（射出直後にパージ離脱）
+for(let sa of [-1,1]){
+    const sabot=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.8,6.0),darkFrameMat);
+    sabot.position.set(sa*4.2,-1.2,0);vesselGroup.add(sabot);
+    sabotMeshes.push({mesh:sabot,side:sa});
+}
+
+// 翼端ナビゲーションストロボ灯
+const strobeLeft=new THREE.Mesh(new THREE.SphereGeometry(0.2,8,8),new THREE.MeshBasicMaterial({color:0xff0000}));
+strobeLeft.position.set(-cfg.wings_span*0.48,-0.2,-8);vesselGroup.add(strobeLeft);
+const strobeRight=new THREE.Mesh(new THREE.SphereGeometry(0.2,8,8),new THREE.MeshBasicMaterial({color:0x00ff00}));
+strobeRight.position.set(cfg.wings_span*0.48,-0.2,-8);vesselGroup.add(strobeRight);
+
 // デュアル超伝導ワープリング
 warpRingGroup.position.set(0,0.5,-2.0);vesselGroup.add(warpRingGroup);
 const warpTorus1=new THREE.Mesh(new THREE.TorusGeometry(5.6,0.38,24,48),coilGlowMat);warpRingGroup.add(warpTorus1);
 const warpTorus2=new THREE.Mesh(new THREE.TorusGeometry(6.4,0.28,24,48),armorMat);warpRingGroup.add(warpTorus2);
 
-// ワープリングの擬似ブルーム・ソフトグロースプライト
 const ringGlowSprite=new THREE.Sprite(new THREE.SpriteMaterial({map:cyanGlowTex,blending:THREE.AdditiveBlending,transparent:true,opacity:0.0}));
 ringGlowSprite.scale.set(22,22,1);warpRingGroup.add(ringGlowSprite);
 
-// 音速突破 ヴェイパーコーン (Mach 1.0前後に出現する白い水蒸気衝撃波)
+// ヴェイパーコーン
 const vaporCone=new THREE.Mesh(
     new THREE.ConeGeometry(10,5,32,1,true),
     new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.0,side:THREE.DoubleSide})
 );
 vaporCone.rotation.x=-Math.PI/2;vaporCone.position.z=3.0;vesselGroup.add(vaporCone);
 
-// デブリ排除レーザー
+// レーザー＆プラズマ
 const laserBeam=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,240,8),laserMat);
 laserBeam.position.set(0,0,128);laserBeam.rotation.x=Math.PI/2;laserBeam.visible=false;vesselGroup.add(laserBeam);
 
-// プラズマシェル
 const plasmaShell=new THREE.Mesh(new THREE.ConeGeometry(7.8,38,24,1,true),plasmaMat);
 plasmaShell.position.z=-4;plasmaShell.rotation.x=-Math.PI/2;vesselGroup.add(plasmaShell);
 
-// RCSスラスター噴射煙
 const rcsMeshes=[];
 for(let s=0;s<4;s++){
     const ang=(s/4)*Math.PI*2;
@@ -897,7 +937,7 @@ for(let s=0;s<4;s++){
     vesselGroup.add(rCone);rcsMeshes.push(rCone);
 }
 
-// 多層ショックダイヤモンド付き推進炎 ＆ レンズフレア
+// 推進炎＆ショックダイヤモンド
 const plumeGroup=new THREE.Group();plumeGroup.position.set(0,0,-15);vesselGroup.add(plumeGroup);
 const coreTorch=new THREE.Mesh(new THREE.ConeGeometry(2.4,24,24,1,true),new THREE.MeshBasicMaterial({color:0xffffff,blending:THREE.AdditiveBlending}));
 coreTorch.rotation.x=Math.PI/2;coreTorch.position.z=-12;plumeGroup.add(coreTorch);
@@ -915,7 +955,7 @@ for(let d=0;d<cfg.shock_diamonds;d++){
 }
 
 // =========================================================================
-// 🌌 ハイパースペース・光速ワープトンネル ＆ 目的宙域
+// 🌌 ハイパースペース・光速ワープトンネル ＆ 目的宙域 (初期は非表示)
 // =========================================================================
 const warpTunnelGroup=new THREE.Group();scene.add(warpTunnelGroup);
 const warpStreakCount=800,warpStreakGeo=new THREE.BufferGeometry();
@@ -932,7 +972,6 @@ warpStreakGeo.setAttribute('position',new THREE.BufferAttribute(streakPos,3));
 const warpStreakLines=new THREE.LineSegments(warpStreakGeo,new THREE.LineBasicMaterial({color:cfg.warp_halo_hex,blending:THREE.AdditiveBlending,transparent:true,opacity:0.0}));
 warpTunnelGroup.add(warpStreakLines);
 
-// 静穏な深宇宙の星々
 const starGeo=new THREE.BufferGeometry(),starCount=3000;
 const starPos=new Float32Array(starCount*3);
 for(let i=0;i<starCount*3;i+=3){
@@ -942,7 +981,7 @@ starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
 const starPoints=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:2.8,transparent:true,opacity:0.85}));
 scene.add(starPoints);
 
-// 目的地惑星 ＆ 電磁フィールドアレスティングリング
+// 目的地惑星 ＆ アレスティングリング (初期位置は非表示で、ワープ完了時にドカンと出現)
 const destGroup=new THREE.Group();destGroup.position.set(0,0,16500);scene.add(destGroup);
 const planetMesh=new THREE.Mesh(new THREE.SphereGeometry(1200,48,48),new THREE.MeshStandardMaterial({color:cfg.dest_color,roughness:0.85}));
 destGroup.add(planetMesh);
@@ -953,15 +992,15 @@ if(cfg.dest_type==='saturn'){
 const catchGate=new THREE.Mesh(new THREE.TorusGeometry(48,3.2,24,48),new THREE.MeshStandardMaterial({color:0x38bdf8,metalness:0.95,roughness:0.2}));
 catchGate.position.set(0,0,-1600);destGroup.add(catchGate);
 
-// 電磁アレスティング・フィールド (面状プラズマ膜)
 const catchField=new THREE.Mesh(
     new THREE.CircleGeometry(47,32),
     new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide})
 );
 catchField.position.set(0,0,-1600);destGroup.add(catchField);
+destGroup.visible=false; // ★発射時は完全に非表示
 
 // =========================================================================
-// 🎬 完全60fps Lerp補間 ＆ シネマティックループ
+// 🎬 決定版：斜め後方ダイナミックチェイス ＆ Lerp補間アニメーションループ
 // =========================================================================
 const tStart=performance.now();let isEnded=false;
 
@@ -970,7 +1009,6 @@ function animate(now){
     const elapsed=(now-tStart)/1000.0;
     const simT=cfg.is_preview?-5.0:(-5.0+elapsed*1.8);
 
-    // ★完全60fps Lerp補間ロジック
     let idx=0;while(idx<data.length-1&&data[idx+1].t<=simT)idx++;
     const p0=data[idx];
     const p1=data[Math.min(data.length-1,idx+1)];
@@ -982,7 +1020,13 @@ function animate(now){
     const curRx=lerpVal('rx'),curRy=lerpVal('ry'),curPitch=lerpVal('pitch_deg');
     const curRing=lerpVal('morph_ring'),curPlasma=lerpVal('plasma_alpha');
     const curProg=lerpVal('progress'),curVapor=lerpVal('vapor_cone');
-    const curBooster=lerpVal('purge_booster'),curFairing=lerpVal('purge_fairing');
+    const curSabot=lerpVal('purge_sabot'),curBooster=lerpVal('purge_booster'),curFairing=lerpVal('purge_fairing');
+    const curFlash=lerpVal('warp_flash');
+
+    // ワープ突入時の閃光フラッシュ演出
+    if(flashOverlay){
+        flashOverlay.style.opacity=curFlash>0.05?curFlash.toFixed(2):'0.0';
+    }
 
     // カタパルト通電
     if(p0.phase==="RAIL_ACCELERATION"||p0.catapult_active){
@@ -1001,12 +1045,23 @@ function animate(now){
     warpTorus1.rotation.z+=0.04+curVc*0.3;warpTorus2.rotation.z-=0.03+curVc*0.3;
     ringGlowSprite.material.opacity=curRing*0.75;
 
-    // 排熱発光
+    // ストロボ点滅
+    const blink=Math.sin(now*0.01)>0.8?1.0:0.1;
+    strobeLeft.material.color.setRGB(blink,0,0);
+    strobeRight.material.color.setRGB(0,blink,0);
+
     const heatRatio=Math.min(1.0,Math.max(0.0,(lerpVal('temp_k')-300.0)/800.0));
     radiatorMat.emissive.setRGB(heatRatio*1.2,heatRatio*0.4,heatRatio*0.1);
     radiatorMat.emissiveIntensity=heatRatio*2.5;
 
-    // ブースター＆フェアリングパージ
+    // パージギミック (サボ・ブースター・フェアリング)
+    if(curSabot>0){
+        sabotMeshes.forEach(sm=>{
+            sm.mesh.position.x+=sm.side*curSabot*1.5;
+            sm.mesh.position.y-=curSabot*1.2;
+            sm.mesh.rotation.z+=sm.side*0.03;
+        });
+    }
     if(curBooster>0){
         boosterMeshes.forEach(bm=>{
             bm.mesh.position.x+=bm.side*curBooster*0.8;
@@ -1038,24 +1093,27 @@ function animate(now){
         shockDiamonds.forEach((sd,i)=>{sd.scale.setScalar(1.0+Math.sin(now*0.02+i)*0.15);});
     }
 
-    // 機体位置更新 (Lerpでヌルヌル追従)
+    // 機体位置更新
     if(p0.phase==="RAIL_ACCELERATION"||p0.phase==="HYPERSONIC_CLIMB"||p0.phase==="PRE_FLIGHT"){
         vesselGroup.position.set(curRx,curRy,lerpVal('downrange_km')*0.1);
         vesselGroup.rotation.set(-THREE.MathUtils.degToRad(curPitch),0,0);
         groundGroup.visible=true;
+        orbitalEarthGroup.visible=(curAlt>=35.0);
     }else{
         const zProg=curProg*14200.0;
         vesselGroup.position.set(0,curRy,zProg);
         vesselGroup.rotation.set(-THREE.MathUtils.degToRad(curPitch),0,0);
         groundGroup.visible=(curAlt<450.0);
+        orbitalEarthGroup.visible=true;
     }
 
-    // ワープトンネル追従 ＆ 高速光筋ストリーク
+    // ワープトンネル追従
     if(p0.phase==="WARP_CRUISE"){
         warpTunnelGroup.visible=true;
         warpStreakLines.material.opacity=Math.min(0.95,curVc*1.3);
         warpTunnelGroup.position.copy(vesselGroup.position);
         warpStreakLines.position.z=(now*0.8*curVc)%80.0;
+        destGroup.visible=false; // 航行中は目標を不可視にして距離感を演出
         if(oscWarp&&actx){
             oscWarp.frequency.setTargetAtTime(550+curVc*1300,actx.currentTime,0.1);
             gainWarp.gain.setTargetAtTime(0.75,actx.currentTime,0.1);
@@ -1066,11 +1124,12 @@ function animate(now){
         if(gainWarp&&actx){gainWarp.gain.setTargetAtTime(0.0001,actx.currentTime,0.2);subBass.gain.setTargetAtTime(0.0001,actx.currentTime,0.2);}
     }
 
-    // 電磁アレスティングフィールド (DECEL時)
-    if(p0.phase==="DECEL_APPROACH"&&curProg>0.88){
-        catchField.material.opacity=Math.min(0.85,(curProg-0.88)*7.0);
-    }else{
-        catchField.material.opacity=0.0;
+    // ★ワープアウト時に目標宙域がドカンと目前に急接近
+    if(p0.phase==="DECEL_APPROACH"||p0.phase==="ARRIVED"){
+        destGroup.visible=true;
+        if(curProg>0.88){
+            catchField.material.opacity=Math.min(0.85,(curProg-0.88)*7.0);
+        }
     }
 
     if(p0.phase==="ARRIVED"&&document.getElementById('b-success').style.display!=='block'){
@@ -1078,35 +1137,20 @@ function animate(now){
         setTimeout(()=>{isEnded=true;},4500);
     }
 
-    // ★カメラワーク (黄金比チェイス・加速G追従・フリップ自動旋回)
-    if(cfg.cam_mode==="フライバイ通過 (超音速通過・大迫力音速突破)"){
-        cameraMain.fov=50;
-        if(p0.phase==="RAIL_ACCELERATION"){
-            cameraMain.position.set(20.0,14.0,vesselGroup.position.z+35.0);
-        }else if(p0.phase==="WARP_CRUISE"){
-            cameraMain.position.set(-25.0,8.0,vesselGroup.position.z+60.0);
-        }else{
-            cameraMain.position.set(30.0,16.0,vesselGroup.position.z-50.0);
-        }
-        cameraMain.lookAt(vesselGroup.position);
-    }else if(cfg.cam_mode==="コックピット主観視点 (HUD密着・計器直結)"){
-        cameraMain.fov=75;
-        cameraMain.position.set(vesselGroup.position.x,vesselGroup.position.y+1.2,vesselGroup.position.z+6.5);
-        cameraMain.rotation.set(-THREE.MathUtils.degToRad(curPitch),0,0);
-    }else{
-        // 黄金比チェイス：機体が画面中央で大きく美しく見える距離 (z: -38)
-        const isFlipped=(p0.phase==="DECEL_APPROACH");
-        const camOffsetZ=isFlipped?38.0:-38.0;
-        const targetCamPos=new THREE.Vector3(
-            vesselGroup.position.x,
-            vesselGroup.position.y+6.5,
-            vesselGroup.position.z+camOffsetZ
-        );
-        // 加速Gによる微小振動
-        if(curMach>1.0&&curMach<5.0){targetCamPos.x+=(Math.random()-0.5)*0.25;targetCamPos.y+=(Math.random()-0.5)*0.25;}
-        cameraMain.position.lerp(targetCamPos,0.12);
-        cameraMain.lookAt(vesselGroup.position.x,vesselGroup.position.y+1.2,vesselGroup.position.z);
+    // ★斜め後方ダイナミックチェイス視点 (アイソメトリック俯瞰)
+    const isFlipped=(p0.phase==="DECEL_APPROACH");
+    const camOffsetZ=isFlipped?55.0:-62.0;
+    const targetCamPos=new THREE.Vector3(
+        vesselGroup.position.x-35.0,
+        vesselGroup.position.y+18.0,
+        vesselGroup.position.z+camOffsetZ
+    );
+    if(curMach>1.0&&curMach<5.0){
+        targetCamPos.x+=(Math.random()-0.5)*0.35;
+        targetCamPos.y+=(Math.random()-0.5)*0.35;
     }
+    cameraMain.position.lerp(targetCamPos,0.12);
+    cameraMain.lookAt(vesselGroup.position.x,vesselGroup.position.y+2.0,vesselGroup.position.z+15.0);
     cameraMain.updateProjectionMatrix();
 
     // PiPカメラ (CAM 02)
@@ -1116,7 +1160,7 @@ function animate(now){
         cameraPip.position.set(160.0,40.0,240.0);cameraPip.lookAt(vesselGroup.position);
     }
 
-    // ★単一レンダラーによる画面分割描画 (GPU負荷半減)
+    // 単一レンダラー画面分割描画
     renderer.setViewport(0,0,winW,winH);
     renderer.setScissor(0,0,winW,winH);
     renderer.setScissorTest(false);
@@ -1160,4 +1204,4 @@ components.html(final_html, height=880)
 
 if launch_clicked:
   st.markdown("---")
-  st.success("🎉 **ミッション完全成功**: 海上メガカタパルト射出、ヴェイパーコーン突破、光速ワープトンネル巡航、電磁アレスティングフィールド着艦シーケンスが完璧に完走しました。")
+  st.success("🎉 **ミッション完全成功**: 海上メガカタパルト射出、サボ分離、球体地球軌道展開、光速ワープ閃光突入、目的宙域アレスティングゲート着艦シーケンスが完璧に完走しました。")
