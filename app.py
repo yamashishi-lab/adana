@@ -11,8 +11,8 @@ st.set_page_config(
 
 st.title("🛸 Hyper-Drive Architect: Apex VFX Cinema Edition")
 st.caption(
-    "※ 完全魔改造フォトリアル版：Gerstnerリアル波浪＆海霧フォグ / 探照灯光柱 / 超精密油圧シリンダー＆Greebleメカ / "
-    "チタン熱変色PBR / レーダー全幅UI / 描画カクつき・惑星急出現根絶 / 多層ヴェイパー＆プラズマボウショック / 重力歪曲色収差 / 磁気テザー拘束"
+    "※ 完全魔改造フォトリアル・シネマ版：PMREM IBL / 推進炎ダイナミックライト / 機体熱放射グロー / "
+    "Gerstner波浪＋海面ウェーキ / 翼端渦＆多層乱流ベイパー / アナモルフィックフレア / アインシュタイン重力歪曲 / 真空音響フィルター"
 )
 
 # =========================================================================
@@ -41,18 +41,18 @@ VESSEL_DESIGNS = {
 
 ARMOR_SYSTEMS = {
     "漆黒カーボンナノチューブ電波吸収装甲 (RAM Stealth)": {
-        "metalness": 0.55,
-        "roughness": 0.42,
+        "metalness": 0.65,
+        "roughness": 0.38,
         "plasma_hex": 0xD946EF,
     },
     "液体金属クローム・電磁ミラー装甲 (Mirror Electrum)": {
         "metalness": 0.98,
-        "roughness": 0.10,
+        "roughness": 0.08,
         "plasma_hex": 0x38BDF8,
     },
     "焼結タングステン・セラミック耐熱複合材 (Thermal Grey)": {
-        "metalness": 0.72,
-        "roughness": 0.28,
+        "metalness": 0.75,
+        "roughness": 0.25,
         "plasma_hex": 0x10B981,
     },
 }
@@ -103,24 +103,24 @@ LAUNCH_ENVIRONMENTS = {
     "相模湾 第1メガフロート射場 (深夜・大気光霧＆サーチライト照射)": {
         "mode": "night",
         "angle_deg": 28.0,
-        "sun_pos": [-1500, 800, -2500],
+        "sun_pos": [-180, 110, -260],
         "sun_color": 0x93C5FD,
-        "sun_int": 2.2,
+        "sun_int": 2.8,
         "sky_zenith": "#02050E",
         "sky_horizon": "#07172F",
         "fog_color": "#07172F",
-        "fog_density": 0.00007,
+        "fog_density": 0.00006,
     },
     "相模湾 第1メガフロート射場 (夜明け・富士シルエット＆マジックアワー)": {
         "mode": "dawn",
         "angle_deg": 28.0,
-        "sun_pos": [2200, 650, 2500],
+        "sun_pos": [200, 90, 220],
         "sun_color": 0xFFAD60,
-        "sun_int": 4.5,
+        "sun_int": 4.8,
         "sky_zenith": "#040B1A",
         "sky_horizon": "#9A3412",
         "fog_color": "#431407",
-        "fog_density": 0.00005,
+        "fog_density": 0.000045,
     },
 }
 
@@ -145,13 +145,10 @@ with tab1:
     belly_color = st.color_picker("下部耐熱カーボンタイル配色", "#0b0f19")
   with c2:
     st.info(f"**構造設計:** {vessel_cfg['desc']}")
-    wings_span = st.slider(
-        "可変ジオメトリ主翼スパン (m)", 18.0, 42.0, 30.0, step=1.0
-    )
+    wings_span = st.slider("可変ジオメトリ主翼スパン (m)", 18.0, 42.0, 30.0, step=1.0)
     radiator_fins = st.slider("展開式 高温放熱ラジエーターパネル数", 2, 8, 4, step=2)
     aux_boosters = st.checkbox(
-        "外装スクラムジェット補助ブースター×2 (高度55kmで分離パージ)",
-        value=True,
+        "外装スクラムジェット補助ブースター×2 (高度55kmで分離パージ)", value=True
     )
 
 with tab2:
@@ -161,9 +158,7 @@ with tab2:
     env_cfg = LAUNCH_ENVIRONMENTS[env_sel]
     coil_charge = st.slider("リニアカタパルト超伝導励磁出力 (%)", 80, 150, 125, step=5)
   with c2:
-    st.caption(
-        "※ メガフロート人工島・防波堤・サーチライト光柱、正面奥の富士山＆丹沢稜線、Gerstner波浪海面を描画。"
-    )
+    st.caption("※ メガフロート人工島・防波堤・サーチライト光柱、富士山稜線、Gerstner波浪海面を描画。")
     cryo_steam = st.checkbox("極低温クライオ水蒸気＆散水デリュージ煙", value=True)
     mach_cone_vfx = st.checkbox("音速ヴェイパー＆熱圏プラズマボウショック", value=True)
 
@@ -175,9 +170,7 @@ with tab3:
     shock_count = st.slider("推進炎 ショックダイヤモンド（マッハリング）段数", 3, 7, 5)
   with c2:
     warp_factor = st.slider("アルクビエレ時空曲率 (Warp Factor)", 2.0, 9.9, 9.2, step=0.1)
-    flip_timing = st.slider(
-        "フリップ＆バーン（180°反転減速）開始地点", 0.60, 0.85, 0.74, step=0.01
-    )
+    flip_timing = st.slider("フリップ＆バーン（180°反転減速）開始地点", 0.60, 0.85, 0.74, step=0.01)
 
 with tab4:
   c1, c2 = st.columns(2)
@@ -195,7 +188,6 @@ with tab4:
         ],
         index=0,
     )
-
 
 # =========================================================================
 # 💥 高精度タイムライン物理データ生成
@@ -396,7 +388,7 @@ def build_timeline(preview_only=False):
       flip_prog = float(np.clip((progress - flip_timing) / 0.05, 0.0, 1.0))
       yaw_deg = flip_prog * 180.0
       pitch_cur = 0.0
-      rcs = 1.0 if flip_prog < 1.0 else 0.0
+      rcs = 1.0 if (flip_prog < 0.25 or (0.75 < flip_prog < 1.0)) else 0.0
       if rem < 0.08:
         w_boom = max(0.0, 1.0 - (0.08 - rem) * 15.0)
       vc = max(0.004, min(vc, rem * 3.2))
@@ -414,9 +406,7 @@ def build_timeline(preview_only=False):
 
     gamma = 1.0 / np.sqrt(max(0.001, 1.0 - (min(0.999, vc) ** 2)))
     ship_time += dt / gamma
-    temp_k = (
-        288.0 + plasma * 1450.0 + (w_active * 560.0) + (eng_pwr * 190.0)
-    )
+    temp_k = 288.0 + plasma * 1650.0 + (w_active * 620.0) + (eng_pwr * 240.0)
 
     frames.append({
         "t": float(t),
@@ -493,7 +483,6 @@ def build_timeline(preview_only=False):
 
   return frames
 
-
 # =========================================================================
 # 🚀 起動ボタン＆JSONシリアライズ
 # =========================================================================
@@ -550,17 +539,14 @@ body,html{
   background:#010308;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
   color:#f8fafc;user-select:none;
 }
-
 #webgl-canvas{
   width:100%;height:100%;display:block;position:absolute;top:0;left:0;
   z-index:1;pointer-events:none;touch-action:pan-y;
 }
-
 .top-ui-container{
   position:absolute;top:0;left:0;width:100%;display:flex;flex-direction:column;
   align-items:center;z-index:30;pointer-events:none;
 }
-
 .hud-top{
   width:100%;min-height:46px;
   background:linear-gradient(180deg,rgba(2,6,18,0.94) 0%,rgba(4,12,28,0.80) 100%);
@@ -571,7 +557,6 @@ body,html{
 }
 .hud-group{display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;letter-spacing:1px;}
 .badge{background:rgba(14,165,233,0.18);border:1px solid #38bdf8;color:#38bdf8;padding:2px 8px;border-radius:3px;font-weight:800;}
-
 .pip-window{
   width:calc(100% - 24px);margin:4px 12px 0 12px;height:165px;
   border:2px solid rgba(56,189,248,0.85);border-radius:6px;
@@ -588,7 +573,6 @@ body,html{
 .rec-dot{width:6px;height:6px;border-radius:50%;background:#f43f5e;animation:pulse 1s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.15;}}
 
-/* ★改善2: 軌道レーダーマップをメイン画面全幅にドッキング */
 .radar-panel{
   position:absolute;bottom:68px;left:0;
   width:100%;height:44px;
@@ -700,7 +684,7 @@ pipBox.addEventListener('click', (e) => {
 });
 
 // =========================================================================
-// 1. レンダラー構築＆大気散乱フォグ＆ポストプロセス（色収差付き）
+// 1. レンダラー構築＆PMREM IBL＆大気散乱フォグ＆ポストプロセス
 // =========================================================================
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -712,7 +696,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 
-// ★改善1: 大気遠近法フォグ（海霧・距離散乱）
 const baseFogColor = new THREE.Color(cfg.env.fog_color);
 scene.fog = new THREE.FogExp2(baseFogColor, cfg.env.fog_density);
 
@@ -730,11 +713,60 @@ if (cfg.cam_preset.includes("エクストラ")) {
 cameraMain.position.copy(baseCamPos);
 cameraMain.lookAt(baseTarget);
 
-// ★魔改造4: ワープ時空歪曲＆色収差シェーダーパス
+// ★解決策1: PMREMGenerator で環境テクスチャをプリフィルター生成（PBR黒潰れ根絶）
+function makeSkyEnvTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, cfg.env.sky_zenith);
+    g.addColorStop(0.48, cfg.env.sky_horizon);
+    g.addColorStop(0.50, '#ffffff');
+    g.addColorStop(0.53, '#1e293b');
+    g.addColorStop(1, '#020617');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 512);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(400, 180, 24, 0, Math.PI * 2); ctx.fill();
+    const tex = new THREE.CanvasTexture(c);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    return tex;
+}
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+const rawSkyTex = makeSkyEnvTexture();
+const envMapTexture = pmremGenerator.fromEquirectangular(rawSkyTex).texture;
+scene.environment = envMapTexture;
+scene.background = rawSkyTex;
+
+// ★解決策3: 太陽光座標を機体近傍に設定＆シャドウ範囲の最適化（アクネ・黒化防止）
+const sunLight = new THREE.DirectionalLight(cfg.env.sun_color, cfg.env.sun_int);
+sunLight.position.set(cfg.env.sun_pos[0] * 0.15, cfg.env.sun_pos[1] * 0.15 + 40.0, cfg.env.sun_pos[2] * 0.15);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 10;
+sunLight.shadow.camera.far = 800;
+sunLight.shadow.camera.left = -90;
+sunLight.shadow.camera.right = 90;
+sunLight.shadow.camera.top = 90;
+sunLight.shadow.camera.bottom = -90;
+sunLight.shadow.bias = -0.0005;
+scene.add(sunLight);
+
+// ★解決策4: カメラ追従型機体輪郭リムライト＋環境アンビエント
+const rimLight = new THREE.DirectionalLight(0x93c5fd, 1.8);
+rimLight.position.set(-60, 45, 60);
+scene.add(rimLight);
+
+const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x0f172a, 1.8);
+scene.add(hemiLight);
+
+// ★映画的魔改造: アインシュタイン重力レンズ歪曲＋色収差＋レンズ大気水滴シェーダー
 const WarpDistortionShader = {
     uniforms: {
         "tDiffuse": { value: null },
-        "uDistort": { value: 0.0 }
+        "uDistort": { value: 0.0 },
+        "uTime": { value: 0.0 },
+        "uDroplets": { value: 0.0 }
     },
     vertexShader: `
         varying vec2 vUv;
@@ -746,15 +778,29 @@ const WarpDistortionShader = {
     fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform float uDistort;
+        uniform float uTime;
+        uniform float uDroplets;
         varying vec2 vUv;
         void main() {
             vec2 center = vec2(0.5, 0.5);
             vec2 uv = vUv;
             vec2 dir = uv - center;
             float dist = length(dir);
-            vec2 rUv = uv + dir * (dist * uDistort * 0.08);
+            // 重力レンズリング歪曲＋色収差
+            float ringDistort = sin(dist * 18.0 - uTime * 4.0) * exp(-dist * 3.5) * uDistort * 0.05;
+            vec2 rUv = uv + dir * (dist * uDistort * 0.09 + ringDistort);
             vec2 gUv = uv;
-            vec2 bUv = uv - dir * (dist * uDistort * 0.08);
+            vec2 bUv = uv - dir * (dist * uDistort * 0.09 + ringDistort);
+
+            // レンズ水滴散乱
+            if (uDroplets > 0.01) {
+                float drop = sin(uv.x * 65.0) * cos(uv.y * 65.0);
+                if (drop > 0.88) {
+                    vec2 dropOffset = vec2(cos(drop * 20.0), sin(drop * 20.0)) * 0.015 * uDroplets;
+                    rUv += dropOffset; gUv += dropOffset; bUv += dropOffset;
+                }
+            }
+
             float r = texture2D(tDiffuse, rUv).r;
             float g = texture2D(tDiffuse, gUv).g;
             float b = texture2D(tDiffuse, bUv).b;
@@ -764,15 +810,13 @@ const WarpDistortionShader = {
 };
 
 const renderSceneMain = new THREE.RenderPass(scene, cameraMain);
-const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(W, H), 1.25, 0.45, 0.82);
+const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(W, H), 1.35, 0.45, 0.80);
 const warpPass = new THREE.ShaderPass(WarpDistortionShader);
 
 const composerMain = new THREE.EffectComposer(renderer);
 composerMain.addPass(renderSceneMain);
 composerMain.addPass(bloomPass);
 composerMain.addPass(warpPass);
-
-// ★改善3(1): PiP側の二重Bloom廃止（直接renderer.render描画で60fps安定化）
 
 window.addEventListener('resize', () => {
     W = window.innerWidth; H = window.innerHeight;
@@ -784,27 +828,10 @@ window.addEventListener('resize', () => {
     cameraPip.updateProjectionMatrix();
 });
 
-const sunLight = new THREE.DirectionalLight(cfg.env.sun_color, cfg.env.sun_int);
-sunLight.position.set(...cfg.env.sun_pos);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-sunLight.shadow.camera.near = 10;
-sunLight.shadow.camera.far = 4500;
-sunLight.shadow.camera.left = -75;
-sunLight.shadow.camera.right = 75;
-sunLight.shadow.camera.top = 75;
-sunLight.shadow.camera.bottom = -75;
-sunLight.shadow.bias = -0.0005;
-scene.add(sunLight);
-
-const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x020617, 1.4);
-scene.add(hemiLight);
-
 // =========================================================================
-// 2. Web Audio シンセサイザー
+// 2. Web Audio シンセサイザー（真空音響ローパスフィルター付き）
 // =========================================================================
-let actx = null, rocketGain = null, coilOsc = null, coilGain = null, warpOsc = null, warpGain = null;
+let actx = null, rocketGain = null, rocketFilter = null, coilOsc = null, coilGain = null, warpOsc = null, warpGain = null, rcsGain = null;
 const soundBtn = document.getElementById('sound-btn');
 soundBtn.addEventListener('click', () => {
     if (actx) return;
@@ -824,15 +851,25 @@ soundBtn.addEventListener('click', () => {
     const whiteNoise = actx.createBufferSource();
     whiteNoise.buffer = noiseBuf;
     whiteNoise.loop = true;
-    const filter = actx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 320;
+    rocketFilter = actx.createBiquadFilter();
+    rocketFilter.type = 'lowpass';
+    rocketFilter.frequency.value = 340;
     rocketGain = actx.createGain();
     rocketGain.gain.value = 0.0001;
-    whiteNoise.connect(filter);
-    filter.connect(rocketGain);
+    whiteNoise.connect(rocketFilter);
+    rocketFilter.connect(rocketGain);
     rocketGain.connect(actx.destination);
     whiteNoise.start(0);
+
+    // RCSパルスノイズ
+    const rcsFilter = actx.createBiquadFilter();
+    rcsFilter.type = 'highpass';
+    rcsFilter.frequency.value = 1200;
+    rcsGain = actx.createGain();
+    rcsGain.gain.value = 0.0001;
+    whiteNoise.connect(rcsFilter);
+    rcsFilter.connect(rcsGain);
+    rcsGain.connect(actx.destination);
 
     coilOsc = actx.createOscillator();
     coilOsc.type = 'sawtooth';
@@ -862,51 +899,28 @@ soundBtn.addEventListener('click', () => {
 });
 
 // =========================================================================
-// 3. プロシージャル環境テクスチャ＆チタン焼きテクスチャ
+// 3. プロシージャルテクスチャ＆PBRマテリアル
 // =========================================================================
-function makeSkyEnvTexture() {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, 0, 512);
-    g.addColorStop(0, cfg.env.sky_zenith);
-    g.addColorStop(0.48, cfg.env.sky_horizon);
-    g.addColorStop(0.50, '#ffffff');
-    g.addColorStop(0.53, '#1e293b');
-    g.addColorStop(1, '#020617');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 512);
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(400, 180, 24, 0, Math.PI * 2); ctx.fill();
-    const tex = new THREE.CanvasTexture(c);
-    tex.mapping = THREE.EquirectangularReflectionMapping;
-    return tex;
-}
-scene.environment = makeSkyEnvTexture();
-
 function makeDetailedHullTexture() {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#6b7280'; ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillStyle = '#64748b'; ctx.fillRect(0, 0, 1024, 1024);
 
     for (let x = 0; x < 1024; x += 64) {
         for (let y = 0; y < 1024; y += 32) {
-            const v = 95 + Math.floor(Math.random() * 55);
+            const v = 110 + Math.floor(Math.random() * 45);
             ctx.fillStyle = `rgb(${v},${v},${v})`;
             ctx.fillRect(x + 2, y + 2, 60, 28);
-            ctx.fillStyle = '#1f2937';
+            ctx.fillStyle = '#1e293b';
             ctx.fillRect(x + 5, y + 5, 2, 2);
             ctx.fillRect(x + 56, y + 5, 2, 2);
             ctx.fillRect(x + 5, y + 24, 2, 2);
             ctx.fillRect(x + 56, y + 24, 2, 2);
         }
     }
-    ctx.strokeStyle = '#111827'; ctx.lineWidth = 3;
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3;
     for (let x = 0; x <= 1024; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke(); }
     for (let y = 0; y <= 1024; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
-
-    const grad = ctx.createLinearGradient(0, 1024, 0, 0);
-    grad.addColorStop(0, 'rgba(15,23,42,0.45)');
-    grad.addColorStop(0.5, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, 1024, 1024);
 
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
@@ -931,16 +945,15 @@ function makeTileTexture() {
 }
 const tileTex = makeTileTexture();
 
-// ★改善4(3): チタン熱変色（ヒートティント）グラデーションテクスチャ
 function makeHeatTintTexture() {
     const c = document.createElement('canvas'); c.width = 256; c.height = 64;
     const ctx = c.getContext('2d');
     const g = ctx.createLinearGradient(0, 0, 256, 0);
-    g.addColorStop(0.0, '#334155'); // 素のチタン
-    g.addColorStop(0.35, '#d97706'); // 酸化黄金
-    g.addColorStop(0.65, '#9333ea'); // 焼入れ紫
-    g.addColorStop(0.85, '#2563eb'); // コバルトブルー
-    g.addColorStop(1.0, '#0284c7'); // ライトブルー
+    g.addColorStop(0.0, '#475569');
+    g.addColorStop(0.35, '#d97706');
+    g.addColorStop(0.65, '#9333ea');
+    g.addColorStop(0.85, '#2563eb');
+    g.addColorStop(1.0, '#38bdf8');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 64);
     return new THREE.CanvasTexture(c);
 }
@@ -949,24 +962,24 @@ const heatTintTex = makeHeatTintTexture();
 const matHull = new THREE.MeshPhysicalMaterial({
     color: cfg.hull_color, metalness: cfg.metalness, roughness: cfg.roughness,
     bumpMap: hullPbrTex, bumpScale: 0.04, roughnessMap: hullPbrTex,
-    clearcoat: 0.85, clearcoatRoughness: 0.15
+    clearcoat: 0.9, clearcoatRoughness: 0.12, emissive: 0x000000, emissiveIntensity: 0.0
 });
 const matBellyTile = new THREE.MeshStandardMaterial({
-    color: cfg.belly_color, metalness: 0.25, roughness: 0.8,
-    bumpMap: tileTex, bumpScale: 0.06
+    color: cfg.belly_color, metalness: 0.35, roughness: 0.75,
+    bumpMap: tileTex, bumpScale: 0.06, emissive: 0x000000, emissiveIntensity: 0.0
 });
-const matTitaniumFrame = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.92, roughness: 0.22 });
-const matHeatNozzle = new THREE.MeshStandardMaterial({ map: heatTintTex, metalness: 0.94, roughness: 0.18 });
-const matPistonRod = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.98, roughness: 0.06 });
-const matDarkAlloy = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.94, roughness: 0.18 });
-const matGoldMLI = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.96, roughness: 0.22, bumpMap: tileTex, bumpScale: 0.02 });
+const matTitaniumFrame = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.92, roughness: 0.20 });
+const matHeatNozzle = new THREE.MeshStandardMaterial({ map: heatTintTex, metalness: 0.95, roughness: 0.15 });
+const matPistonRod = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.98, roughness: 0.05 });
+const matDarkAlloy = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.22 });
+const matGoldMLI = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.96, roughness: 0.20, bumpMap: tileTex, bumpScale: 0.02 });
 const matCopperCoil = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.95, roughness: 0.15 });
 const matCanopy = new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, metalness: 0.95, roughness: 0.03, transparent: true, opacity: 0.42, clearcoat: 1.0 });
 const matRadiator = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.82, roughness: 0.28, emissive: 0xef4444, emissiveIntensity: 0.0 });
 const matConcreteWet = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.35, bumpMap: hullPbrTex, bumpScale: 0.06 });
 
 // =========================================================================
-// 4. 宇宙船の完全同期階層＆超精密ディテールメカ
+// 4. 宇宙船・完全階層＆油圧シリンダー・RCS・フレア・渦流
 // =========================================================================
 const radAngle = THREE.MathUtils.degToRad(cfg.env.angle_deg);
 
@@ -988,6 +1001,7 @@ const wingPivots = [];
 const sabotClamps = [];
 const fairingPanels = [];
 const strobeLeds = [];
+const rcsJets = [];
 const warpRingAssembly = new THREE.Group();
 shipMeshGroup.add(warpRingAssembly);
 
@@ -995,7 +1009,7 @@ const spineCore = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 30.0), matDarkA
 spineCore.castShadow = true; spineCore.receiveShadow = true;
 shipMeshGroup.add(spineCore);
 
-// ★改善4(1): Greeble（微小メカパーツ・センサー・RCSポッド）InstancedMesh 大量配置
+// Greebleディテール
 const greebleDummy = new THREE.Object3D();
 const greebleBoxInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, 0.25, 0.6), matTitaniumFrame, 160);
 const greebleCylInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.12, 0.5, 8), matPistonRod, 100);
@@ -1023,7 +1037,7 @@ for (let g = 0; g < 100; g++) {
 shipMeshGroup.add(greebleBoxInst);
 shipMeshGroup.add(greebleCylInst);
 
-// コックピット＆パイロットバイザー
+// コックピット＆クルー
 const cockpitGroup = new THREE.Group();
 cockpitGroup.position.set(0, 0.7, 7.5);
 shipMeshGroup.add(cockpitGroup);
@@ -1032,11 +1046,9 @@ for (let s of [-0.4, 0.4]) {
     const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 0.6), matDarkAlloy);
     seat.position.set(s, 0, 0);
     cockpitGroup.add(seat);
-    // パイロットヘルメット
     const pilotHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), matDarkAlloy);
     pilotHead.position.set(s, 0.55, 0.05);
     cockpitGroup.add(pilotHead);
-    // 発光バイザー
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.1), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
     visor.position.set(s, 0.57, 0.18);
     cockpitGroup.add(visor);
@@ -1050,7 +1062,7 @@ consoleHolo.rotation.x = -0.5;
 consoleHolo.position.set(0, 0.25, 1.2);
 cockpitGroup.add(consoleHolo);
 
-// 機体形状の構築
+// 機体形状
 if (cfg.style === "stealth_waverider") {
     const noseShape = new THREE.Shape();
     noseShape.moveTo(0, 1.1);
@@ -1136,6 +1148,8 @@ canopyGlass.castShadow = true;
 shipMeshGroup.add(canopyGlass);
 
 const halfSpan = cfg.wings_span * 0.5;
+const wingtipVortices = [];
+
 for (let s of [-1, 1]) {
     const pivot = new THREE.Group();
     pivot.position.set(s * 3.2, -0.1, 1.5);
@@ -1159,10 +1173,19 @@ for (let s of [-1, 1]) {
     pivot.add(tipLed);
     strobeLeds.push(tipLed);
 
+    // ★魔改造: 翼端渦（Wingtip Vortex）チューブ
+    const vortexGeo = new THREE.CylinderGeometry(0.08, 0.85, 45.0, 8, 1, true);
+    const vortexMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false });
+    const vortexMesh = new THREE.Mesh(vortexGeo, vortexMat);
+    vortexMesh.rotation.x = Math.PI / 2;
+    vortexMesh.position.set(s * (halfSpan - 3.4), 0, -28.0);
+    pivot.add(vortexMesh);
+    wingtipVortices.push({ mesh: vortexMesh, mat: vortexMat });
+
     wingPivots.push({ group: pivot, side: s });
 }
 
-// ★改善4(4): 油圧アクチュエーター・シリンダー連動ベイ扉
+// 油圧アクチュエーター・シリンダー連動ベイ扉
 for (let s of [-1, 1]) {
     for (let zOff of [-6.0, 1.0]) {
         const doorPivot = new THREE.Group();
@@ -1175,7 +1198,6 @@ for (let s of [-1, 1]) {
         doorPivot.add(doorPanel);
         bayDoors.push({ pivot: doorPivot, side: s });
 
-        // 油圧ピストン機構
         const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.4, 8), matTitaniumFrame);
         const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.2, 8), matPistonRod);
         cyl.position.set(s * 1.2, 0.7, zOff);
@@ -1187,6 +1209,19 @@ for (let s of [-1, 1]) {
     }
 }
 
+// ★魔改造: 姿勢制御RCSスラスター（冷光ガス噴射ノズル）
+for (let s of [-1, 1]) {
+    for (let z of [10.0, -10.0]) {
+        const rcsMat = new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.0, depthWrite: false });
+        const rcsCone = new THREE.Mesh(new THREE.ConeGeometry(0.4, 3.2, 8, 1, true), rcsMat);
+        rcsCone.rotation.z = s * (Math.PI / 2);
+        rcsCone.position.set(s * 2.8, 0.2, z);
+        shipMeshGroup.add(rcsCone);
+        rcsJets.push({ cone: rcsCone, mat: rcsMat });
+    }
+}
+
+// ワープリング・アセンブリ
 warpRingAssembly.position.set(0, -0.8, -2.5);
 const ringPylon = new THREE.Mesh(new THREE.BoxGeometry(1.6, 3.8, 4.5), matTitaniumFrame);
 ringPylon.position.set(0, -1.8, 0);
@@ -1249,7 +1284,7 @@ for (let r = 0; r < cfg.radiator_fins; r++) {
     radiatorPanels.push({ pivot: rPivot, side: s });
 }
 
-// 推進ノズル（チタン熱変色PBR適用）
+// 推進ノズル
 const nozzleRoot = new THREE.Group();
 nozzleRoot.position.set(0, 0, -14.2);
 shipMeshGroup.add(nozzleRoot);
@@ -1284,12 +1319,38 @@ for (let s of [-1, 1]) {
     sabotClamps.push({ mesh: sabot, baseX: s * 3.8, side: s });
 }
 
-// ★魔改造2 & 3: 音速ヴェイパーコーン＆熱圏プラズマボウショック
-const vaporMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false });
-const vaporCone = new THREE.Mesh(new THREE.ConeGeometry(8.5, 3.5, 32, 1, true), vaporMat);
-vaporCone.rotation.x = -Math.PI / 2;
-vaporCone.position.set(0, 0, 1.0);
-shipMeshGroup.add(vaporCone);
+// ★魔改造: 多重乱流音速ヴェイパーコーン
+const vaporShaderMat = new THREE.ShaderMaterial({
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float uAlpha;
+        uniform float uTime;
+        varying vec2 vUv;
+        void main() {
+            float noise = sin(vUv.x * 25.0 + uTime * 35.0) * cos(vUv.y * 30.0 - uTime * 20.0);
+            float rim = pow(vUv.y, 2.0);
+            float tear = smoothstep(0.15, 0.85, vUv.y + noise * 0.18);
+            gl_FragColor = vec4(1.0, 1.0, 1.0, uAlpha * rim * tear * 0.75);
+        }
+    `,
+    uniforms: { uAlpha: { value: 0.0 }, uTime: { value: 0.0 } },
+    transparent: true, depthWrite: false, side: THREE.DoubleSide
+});
+const vaporCone1 = new THREE.Mesh(new THREE.ConeGeometry(8.5, 4.2, 32, 1, true), vaporShaderMat);
+vaporCone1.rotation.x = -Math.PI / 2;
+vaporCone1.position.set(0, 0, 1.0);
+shipMeshGroup.add(vaporCone1);
+
+const vaporCone2 = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.8, 32, 1, true), vaporShaderMat);
+vaporCone2.rotation.x = -Math.PI / 2;
+vaporCone2.position.set(0, 0.4, 7.5);
+shipMeshGroup.add(vaporCone2);
 
 const plasmaBowMat = new THREE.MeshBasicMaterial({ color: cfg.plasma_hex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false });
 const plasmaBow = new THREE.Mesh(new THREE.SphereGeometry(4.8, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.5), plasmaBowMat);
@@ -1297,10 +1358,37 @@ plasmaBow.rotation.x = -Math.PI / 2;
 plasmaBow.position.set(0, 0, 15.0);
 shipMeshGroup.add(plasmaBow);
 
-// GLSL乱流プラズマジェット噴射炎
+// ★魔改造: プラズマ・アブレーション火花（耐熱剥離ストリーク）
+const sparkCount = 280;
+const sparkGeo = new THREE.BufferGeometry();
+const sparkPos = new Float32Array(sparkCount * 6);
+for (let i = 0; i < sparkCount; i++) {
+    const rx = (Math.random() - 0.5) * 6.0, ry = (Math.random() - 0.5) * 2.5, rz = Math.random() * 20.0;
+    sparkPos[i * 6] = rx; sparkPos[i * 6 + 1] = ry; sparkPos[i * 6 + 2] = rz;
+    sparkPos[i * 6 + 3] = rx; sparkPos[i * 6 + 4] = ry; sparkPos[i * 6 + 5] = rz - 6.0;
+}
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+const sparkMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending });
+const sparkLines = new THREE.LineSegments(sparkGeo, sparkMat);
+shipMeshGroup.add(sparkLines);
+
+// 推進ジェット噴射炎
 const plumeRoot = new THREE.Group();
 plumeRoot.position.set(0, 0, -16.5);
 shipMeshGroup.add(plumeRoot);
+
+// ★解決策4: 推進炎ダイナミック・ポイントライト（機体と大地を照らす）
+const plumeLight = new THREE.PointLight(cfg.flame_hex, 0.0, 160.0);
+plumeLight.position.set(0, 0, -2.0);
+plumeRoot.add(plumeLight);
+
+// ★魔改造: 横方向アナモルフィック・レンズフレア
+const flareTexMat = new THREE.MeshBasicMaterial({
+    color: cfg.flame_hex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const anamorphicFlare = new THREE.Mesh(new THREE.PlaneGeometry(55.0, 1.2), flareTexMat);
+anamorphicFlare.position.set(0, 0, -2.5);
+plumeRoot.add(anamorphicFlare);
 
 const flameShaderMat = new THREE.ShaderMaterial({
     vertexShader: `
@@ -1354,7 +1442,7 @@ for (let d = 0; d < cfg.shock_count; d++) {
 }
 
 // =========================================================================
-// 5. レール完全同期＆Gerstnerリアル波浪海面＆探照灯＆散水クラウド
+// 5. レール完全同期＆Gerstner波浪海面（XZ座標整合修正）＆探照灯
 // =========================================================================
 const catapultSlopeRoot = new THREE.Group();
 catapultSlopeRoot.rotation.x = -radAngle;
@@ -1362,6 +1450,15 @@ scene.add(catapultSlopeRoot);
 
 const railMover = new THREE.Group();
 catapultSlopeRoot.add(railMover);
+
+// ★魔改造: リニアカタパルト超伝導アーク放電スパーク
+const arcLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]);
+const arcLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, linewidth: 2 });
+const arcLine = new THREE.Line(arcLineGeo, arcLineMat);
+catapultSlopeRoot.add(arcLine);
+
+const arcLight = new THREE.PointLight(0x38bdf8, 0.0, 80.0);
+catapultSlopeRoot.add(arcLight);
 
 const dummy = new THREE.Object3D();
 const segCount = 220;
@@ -1382,7 +1479,7 @@ railMover.add(mainGirder);
 const groundEnvMover = new THREE.Group();
 scene.add(groundEnvMover);
 
-// ★改善1: Gerstner波浪＋マイクロバンプ海面シェーダー
+// ★解決策2: XZ水平面を基準としたGerstner波浪＋マイクロバンプ海面（法線・変位整合）
 const oceanShaderMat = new THREE.ShaderMaterial({
     vertexShader: `
         varying vec2 vUv;
@@ -1390,29 +1487,29 @@ const oceanShaderMat = new THREE.ShaderMaterial({
         varying vec3 vNormal;
         uniform float uTime;
 
-        vec3 gerstnerWave(vec4 wave, vec3 p, inout vec3 tangent, inout vec3 binormal) {
+        vec3 gerstnerWaveXZ(vec4 wave, vec3 p, inout vec3 tangent, inout vec3 binormal) {
             float steepness = wave.z;
             float wavelength = wave.w;
             float k = 2.0 * 3.14159 / wavelength;
             float c = sqrt(9.8 / k);
             vec2 d = normalize(wave.xy);
-            float f = k * (dot(d, p.xy) - c * uTime * 0.45);
+            float f = k * (dot(d, p.xz) - c * uTime * 0.45);
             float a = steepness / k;
 
-            tangent += vec3(-d.x * d.x * (steepness * sin(f)), -d.x * d.y * (steepness * sin(f)), d.x * (steepness * cos(f)));
-            binormal += vec3(-d.x * d.y * (steepness * sin(f)), -d.y * d.y * (steepness * sin(f)), d.y * (steepness * cos(f)));
-            return vec3(d.x * (a * cos(f)), d.y * (a * cos(f)), a * sin(f));
+            tangent += vec3(-d.x * d.x * (steepness * sin(f)), d.x * (steepness * cos(f)), -d.x * d.y * (steepness * sin(f)));
+            binormal += vec3(-d.x * d.y * (steepness * sin(f)), d.y * (steepness * cos(f)), -d.y * d.y * (steepness * sin(f)));
+            return vec3(d.x * (a * cos(f)), a * sin(f), d.y * (a * cos(f)));
         }
 
         void main() {
             vUv = uv * 350.0;
             vec3 p = position;
             vec3 tangent = vec3(1.0, 0.0, 0.0);
-            vec3 binormal = vec3(0.0, 1.0, 0.0);
+            vec3 binormal = vec3(0.0, 0.0, 1.0);
 
-            p += gerstnerWave(vec4(1.0, 0.3, 0.18, 90.0), position, tangent, binormal);
-            p += gerstnerWave(vec4(0.4, 0.9, 0.12, 45.0), position, tangent, binormal);
-            p += gerstnerWave(vec4(-0.6, 0.7, 0.08, 22.0), position, tangent, binormal);
+            p += gerstnerWaveXZ(vec4(1.0, 0.3, 0.22, 90.0), position, tangent, binormal);
+            p += gerstnerWaveXZ(vec4(0.4, 0.9, 0.14, 45.0), position, tangent, binormal);
+            p += gerstnerWaveXZ(vec4(-0.6, 0.7, 0.09, 22.0), position, tangent, binormal);
 
             vNormal = normalize(cross(binormal, tangent));
             vec4 worldP = modelMatrix * vec4(p, 1.0);
@@ -1430,13 +1527,12 @@ const oceanShaderMat = new THREE.ShaderMaterial({
 
         void main() {
             vec3 viewDir = normalize(cameraPosition - vWorldPos);
-            // マイクロバンプ（さざ波の法線変調）
             float micro = sin(vUv.x * 2.5 + uTime * 2.0) * cos(vUv.y * 2.5 - uTime * 1.5) * 0.08;
-            vec3 n = normalize(vNormal + vec3(micro, micro, 0.0));
+            vec3 n = normalize(vNormal + vec3(micro, 0.0, micro));
 
             float fresnel = pow(1.0 - max(0.0, dot(n, viewDir)), 4.0);
-            vec3 deepWater = vec3(0.012, 0.038, 0.085);
-            vec3 skyReflect = vec3(0.25, 0.55, 0.95);
+            vec3 deepWater = vec3(0.015, 0.045, 0.095);
+            vec3 skyReflect = vec3(0.35, 0.65, 0.98);
 
             vec3 halfVec = normalize(uSunDir + viewDir);
             float spec = pow(max(0.0, dot(n, halfVec)), 160.0) * 4.5;
@@ -1463,7 +1559,7 @@ islandBase.position.set(0, -32, 1750);
 islandBase.receiveShadow = true;
 groundEnvMover.add(islandBase);
 
-// ★改善1: メガフロート両脇のボリューメトリック探照灯（サーチライト光柱）
+// サーチライト光柱
 const beamGeo = new THREE.CylinderGeometry(0.5, 32.0, 750, 16, 1, true);
 const beamMat = new THREE.MeshBasicMaterial({
     color: cfg.env.sun_color, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
@@ -1478,7 +1574,7 @@ for (let b = 0; b < 10; b++) {
     groundEnvMover.add(beam);
 }
 
-// ★魔改造1: クライオ水蒸気＆散水ウォーター・デリュージ煙
+// 散水デリュージ煙
 const delugeGeo = new THREE.SphereGeometry(18.0, 12, 12);
 const delugeMat = new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.0, depthWrite: false });
 const delugePuffs = [];
@@ -1559,7 +1655,7 @@ const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(6800, 32, 32), new THRE
 scene.add(moonMesh);
 
 // =========================================================================
-// 7. ワープ演出（12本二重らせんオーロラ＆スターストレッチ）
+// 7. ワープ演出（12本二重らせんオーロラ＆ドップラー・スターストレッチ）
 // =========================================================================
 const warpGroup = new THREE.Group();
 warpGroup.visible = false;
@@ -1607,16 +1703,52 @@ const starLines = new THREE.LineSegments(starGeo, new THREE.LineBasicMaterial({ 
 warpGroup.add(starLines);
 
 // =========================================================================
-// 8. ★改善3(2): 目的星・スターゲート（常時存在＆超遠方スケールイン）＆磁気テザー
+// 8. 目的星・スターゲート＆フレネル大気圏＆磁気テザー
 // =========================================================================
 const destWorld = new THREE.Group();
-destWorld.visible = true; // 常時visibleで遅延コンパイルを根絶
+destWorld.visible = true;
 scene.add(destWorld);
 
-const destPlanetMat = new THREE.MeshStandardMaterial({ color: cfg.dest_color, roughness: 0.75 });
+// プロシージャル惑星マップ（縞模様）
+function makeGasGiantTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+    const ctx = c.getContext('2d');
+    for (let y = 0; y < 512; y++) {
+        const n = Math.sin(y * 0.08) * 0.5 + 0.5;
+        ctx.fillStyle = n > 0.5 ? cfg.dest_color : cfg.dest_band;
+        ctx.fillRect(0, y, 1024, 1);
+    }
+    return new THREE.CanvasTexture(c);
+}
+
+const destPlanetMat = new THREE.MeshStandardMaterial({ map: makeGasGiantTexture(), roughness: 0.65 });
 const destPlanet = new THREE.Mesh(new THREE.SphereGeometry(3200, 64, 64), destPlanetMat);
 destPlanet.position.set(700, -450, 5200);
 destWorld.add(destPlanet);
+
+// ★魔改造: 惑星フレネル大気グロー球（実写写真の空気感）
+const atmosphereMat = new THREE.ShaderMaterial({
+    vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        varying vec3 vNormal;
+        void main() {
+            float intensity = pow(0.65 - dot(vNormal, vec3(0, 0, 1.0)), 2.5);
+            gl_FragColor = vec4(0.38, 0.75, 0.98, 1.0) * intensity;
+        }
+    `,
+    blending: THREE.AdditiveBlending,
+    side: THREE.BackSide,
+    transparent: true
+});
+const atmosphereGlow = new THREE.Mesh(new THREE.SphereGeometry(3350, 48, 48), atmosphereMat);
+atmosphereGlow.position.copy(destPlanet.position);
+destWorld.add(atmosphereGlow);
 
 const stargateGroup = new THREE.Group();
 destWorld.add(stargateGroup);
@@ -1624,11 +1756,9 @@ const gateOuter = new THREE.Mesh(new THREE.TorusGeometry(65, 4.8, 20, 64), matTi
 gateOuter.castShadow = true;
 stargateGroup.add(gateOuter);
 
-// 初期位置を超遠方に待機
 destWorld.position.set(0, 0, 800000.0);
 destWorld.scale.setScalar(0.0001);
 
-// ★魔改造5: 磁気拘束プラズマテザー
 const tetherLines = [];
 const tetherMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, linewidth: 2 });
 for (let k = 0; k < 6; k++) {
@@ -1638,7 +1768,6 @@ for (let k = 0; k < 6; k++) {
     tetherLines.push(tLine);
 }
 
-// ★改善3(1): 起動時全シェーダー事前コンパイル（フレーム落ち根絶）
 renderer.compile(scene, cameraMain);
 
 // =========================================================================
@@ -1733,8 +1862,18 @@ function animate(now) {
     const yawDeg = L('yaw_deg');
     const vib = L('vib');
     const prog = L('progress');
+    const tempK = L('temp_k');
 
-    // レール＆地上界の完全同軸スライド
+    // ★魔改造: 多重周波数ノイズによるリアルなカメラ手ブレ＆カタパルトG慣性遅延
+    const slowShake = Math.sin(now * 0.003) * Math.cos(now * 0.002) * 1.8;
+    const fastShake = (Math.sin(now * 0.055) + Math.cos(now * 0.085)) * vib * 0.8;
+    const gLag = Math.min(22.0, L('g') * 1.4);
+
+    cameraMain.position.x = baseCamPos.x + slowShake * 0.4;
+    cameraMain.position.y = baseCamPos.y + slowShake * 0.3;
+    cameraMain.position.z = baseCamPos.z - gLag + fastShake;
+
+    // レール＆地上移動
     railMover.position.set(0, 0, -distM);
     const groundY = -distM * Math.sin(radAngle);
     const groundZ = -distM * Math.cos(radAngle);
@@ -1750,18 +1889,19 @@ function animate(now) {
         shipMeshGroup.position.set(
             Math.sin(now * 0.045) * vib * 0.35,
             Math.cos(now * 0.055) * vib * 0.35,
-            -Math.min(18.0, L('g') * 1.2) + Math.sin(now * 0.035) * vib * 0.35
+            Math.sin(now * 0.035) * vib * 0.35
         );
     }
 
     cameraMain.fov = 46.0 + vc * 24.0 + (mach > 5 ? 4.0 : 0.0);
     cameraMain.updateProjectionMatrix();
 
-    // シェーダー・フォグ更新
+    // シェーダー更新
     oceanShaderMat.uniforms.uTime.value = elapsed;
     flameShaderMat.uniforms.uTime.value = elapsed;
+    vaporShaderMat.uniforms.uTime.value = elapsed;
 
-    // 高度に応じた大気フォグの減衰
+    // 高度に応じた大気フォグ減衰
     const fogFade = THREE.MathUtils.clamp(1.0 - (altKm / 45.0), 0.0, 1.0);
     scene.fog.density = cfg.env.fog_density * fogFade;
 
@@ -1777,12 +1917,48 @@ function animate(now) {
         delugeMat.opacity = 0.0;
     }
 
-    // 音速ヴェイパーコーン＆熱圏プラズマボウショック
-    vaporMat.opacity = L('vapor_alpha') * 0.65;
-    plasmaBowMat.opacity = L('plasma_alpha') * 0.85;
+    // ★魔改造: 超音速多重ベイパー＆翼端渦流＆火花アブレーション
+    const vAlpha = L('vapor_alpha');
+    vaporShaderMat.uniforms.uAlpha.value = vAlpha * 0.75;
+    wingtipVortices.forEach(v => { v.mat.opacity = vAlpha * 0.85; });
 
-    // ワープ空間歪曲（色収差）
+    const pAlpha = L('plasma_alpha');
+    plasmaBowMat.opacity = pAlpha * 0.85;
+    sparkMat.opacity = pAlpha > 0.1 ? 0.85 : 0.0;
+
+    // ★魔改造: 機体温度上昇による黒体輻射グロー（熱発光）
+    if (tempK > 700.0) {
+        const glowProg = Math.min(1.0, (tempK - 700.0) / 1200.0);
+        const glowColor = new THREE.Color().lerpColors(new THREE.Color(0xd97706), new THREE.Color(0xf8fafc), glowProg * 0.7);
+        matBellyTile.emissive.copy(glowColor);
+        matBellyTile.emissiveIntensity = glowProg * 1.8;
+        matHull.emissive.copy(glowColor);
+        matHull.emissiveIntensity = glowProg * 0.8;
+    } else {
+        matBellyTile.emissiveIntensity = 0.0;
+        matHull.emissiveIntensity = 0.0;
+    }
+
+    // リニアアーク放電
+    const sArc = L('spark_arc');
+    if (sArc > 0.05 && f0.phase === "CATAPULT_RAIL_ACCEL") {
+        arcLineMat.opacity = 0.95;
+        arcLight.intensity = 3.5 + Math.random() * 4.0;
+        const arcPos = arcLine.geometry.attributes.position;
+        const jX = (Math.random() - 0.5) * 1.4, jY = (Math.random() - 0.5) * 1.4;
+        arcPos.setXYZ(0, -3.8 + jX, -1.2 + jY, -distM + 2.0);
+        arcPos.setXYZ(1, 3.8 - jX, -1.2 - jY, -distM - 4.0);
+        arcPos.needsUpdate = true;
+        arcLight.position.set(0, -1.0, -distM);
+    } else {
+        arcLineMat.opacity = 0.0;
+        arcLight.intensity = 0.0;
+    }
+
+    // ワープ空間歪曲（色収差＋重力レンズ＋水滴）
     warpPass.uniforms.uDistort.value = L('warp_boom') * 2.8 + L('warp_active') * 0.35;
+    warpPass.uniforms.uTime.value = elapsed;
+    warpPass.uniforms.uDroplets.value = (altKm < 8.0 && simTime > 0.0) ? 1.0 - (altKm / 8.0) : 0.0;
 
     const flashState = (Math.floor(now * 0.004) % 2 === 0);
     strobeLeds.forEach(led => { led.visible = flashState; });
@@ -1812,7 +1988,7 @@ function animate(now) {
         stationMarker.visible = false;
     }
 
-    // メカギミック＆油圧シリンダー伸縮同期
+    // メカギミック＆油圧シリンダー同期
     const bayVal = L('bay_open');
     wingPivots.forEach(wp => { wp.group.rotation.y = wp.side * L('wing_sweep') * 0.32; });
     bayDoors.forEach(bd => { bd.pivot.rotation.z = bd.side * bayVal * 1.35; });
@@ -1823,23 +1999,32 @@ function animate(now) {
     radiatorPanels.forEach(rp => { rp.pivot.rotation.z = rp.side * (1.0 - L('rad_deploy')) * 1.45; });
     irisPaddles.forEach(ip => { ip.rotation.x = -0.35 + L('nozzle_open') * 0.48; });
 
+    // RCS噴射
+    const rcsBurst = L('rcs_burst');
+    rcsJets.forEach(rj => { rj.mat.opacity = rcsBurst * 0.85; });
+
     warpRingAssembly.position.y = -0.8 + L('ring_lift') * 4.2;
     innerWarpCoil.rotation.z += 0.02 + L('warp_charge') * 0.35;
     gravLensMat.uniforms.uAlpha.value = L('warp_lens');
     accretionRing.material.opacity = L('warp_lens') * 0.95;
     accretionRing.rotation.z += 0.08;
 
-    // 推進炎
+    // 推進炎＆アナモルフィックフレア＆ダイナミックライト
     const engPwr = L('engine_power');
     plumeRoot.visible = engPwr > 0.02;
     turbineDisc.rotation.z += 0.25 * (1.0 + engPwr * 2.0);
     if (plumeRoot.visible) {
         const pulse = 0.95 + Math.sin(now * 0.08) * 0.05;
         plumeRoot.scale.set(pulse, pulse, engPwr * (1.0 + vc * 1.5) * pulse);
+        plumeLight.intensity = engPwr * 4.5;
+        flareTexMat.opacity = engPwr * 0.85;
         shockBarrels.forEach((sb, idx) => {
             const bPulse = 1.0 + Math.sin(now * 0.12 + idx * 0.8) * 0.12;
             sb.scale.set(bPulse, bPulse, 2.2 * bPulse);
         });
+    } else {
+        plumeLight.intensity = 0.0;
+        flareTexMat.opacity = 0.0;
     }
 
     // ワープオーロラ＆スターストレッチ
@@ -1862,7 +2047,7 @@ function animate(now) {
         starGeo.attributes.position.needsUpdate = true;
     }
 
-    // ★改善3(2): 目的星＆スターゲートの超遠方からの連続スケールイン（急激な出現を完全排除）
+    // 目的星＆スターゲート（遠方からの連続スケールイン）
     if (prog > 0.20) {
         const approachProg = THREE.MathUtils.clamp((prog - 0.20) / 0.80, 0.0, 1.0);
         const curDist = THREE.MathUtils.lerp(650000.0, 12.0, Math.pow(approachProg, 2.5));
@@ -1874,7 +2059,7 @@ function animate(now) {
         destWorld.scale.setScalar(0.0001);
     }
 
-    // ★魔改造5: 磁気拘束プラズマテザーの動的接続
+    // 磁気拘束プラズマテザー
     const tLock = L('tether_lock');
     tetherMat.opacity = tLock * 0.85;
     if (tLock > 0.01) {
@@ -1890,9 +2075,12 @@ function animate(now) {
         }
     }
 
-    // Web Audio
+    // Web Audio（宇宙空間での音響カットオフ）
     if (actx) {
-        rocketGain.gain.setTargetAtTime(engPwr * 0.42, actx.currentTime, 0.08);
+        const inAtmo = (altKm < 95.0);
+        rocketFilter.frequency.setTargetAtTime(inAtmo ? 340 : 55, actx.currentTime, 0.1);
+        rocketGain.gain.setTargetAtTime(engPwr * (inAtmo ? 0.42 : 0.12), actx.currentTime, 0.08);
+        rcsGain.gain.setTargetAtTime(rcsBurst * 0.18, actx.currentTime, 0.04);
         coilGain.gain.setTargetAtTime(f0.phase.includes("COIL") || f0.phase.includes("RAIL") ? 0.22 : 0.0001, actx.currentTime, 0.08);
         warpGain.gain.setTargetAtTime(wAct * 0.38 + L('warp_lens') * 0.25, actx.currentTime, 0.1);
         warpOsc.frequency.setTargetAtTime(60 + vc * 380, actx.currentTime, 0.1);
@@ -1930,7 +2118,8 @@ function animate(now) {
 
     drawRadar(prog, vc, mach, altKm);
 
-    // ★改善3(1): メインはComposer、PiPは直接描画で負荷を半減
+    // ★解決策5: レンダーターゲットの明示的リセット＆デュアルビューポート描画
+    renderer.setRenderTarget(null);
     renderer.setViewport(0, 0, W, H);
     renderer.setScissor(0, 0, W, H);
     renderer.setScissorTest(false);
@@ -1941,6 +2130,7 @@ function animate(now) {
         renderer.setViewport(rect.left, H - rect.bottom, rect.width, rect.height);
         renderer.setScissor(rect.left, H - rect.bottom, rect.width, rect.height);
         renderer.setScissorTest(true);
+        renderer.autoClear = false;
         renderer.render(scene, cameraPip);
     }
 
