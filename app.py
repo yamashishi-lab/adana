@@ -1267,3 +1267,4 @@ components.html(final_html, height=880)
 if launch_clicked:
   st.markdown("---")
   st.success("🎉 **ミッション完全成功**: 海上メガカタパルト射出、サボ分離、球体地球軌道展開、光速ワープ閃光突入、目的宙域アレスティングゲート着艦シーケンスが完璧に完走しました。")
+
