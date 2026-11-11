@@ -190,7 +190,7 @@ with tab4:
         )
 
 # =========================================================================
-# 💥 タイムライン物理データ（映画的25秒濃縮テンポ）
+# 💥 タイムライン物理データ（映画的メリハリ60秒シーケンス＆着陸完結設計）
 # =========================================================================
 def build_timeline(preview_only=False):
     if preview_only:
@@ -198,36 +198,39 @@ def build_timeline(preview_only=False):
             "t": -5.0, "phase": "PAD_STANDBY", "dist_m": 0.0, "alt_km": 0.04,
             "mach": 0.0, "vc": 0.0, "g": 1.0, "temp_k": 288.0,
             "clamp_open": 0.0, "sabot_purge": 0.0, "booster_purge": 0.0, "fairing_purge": 0.0,
-            "wing_sweep": 0.0, "bay_open": 0.0, "ring_lift": 0.0, "rad_deploy": 0.0,
+            "gear_deploy": 0.0, "wing_sweep": 0.0, "bay_open": 0.0, "ring_lift": 0.0, "rad_deploy": 0.0,
             "nozzle_open": 0.2, "engine_power": 0.0, "spark_arc": 0.0,
             "vapor_alpha": 0.0, "plasma_alpha": 0.0, "warp_charge": 0.0,
             "warp_lens": 0.0, "warp_active": 0.0, "warp_boom": 0.0,
-            "rcs_burst": 0.0, "tether_lock": 0.0, "pitch_deg": env_cfg["angle_deg"],
-            "yaw_deg": 0.0, "vib": 0.0, "progress": 0.0, "ship_time": 0.0,
+            "rcs_burst": 0.0, "tether_lock": 0.0, "shield_hit": 0.0,
+            "pitch_deg": float(env_cfg["angle_deg"]), "yaw_deg": 0.0, "roll_deg": 0.0,
+            "vib": 0.0, "progress": 0.0, "ship_time": 0.0,
         }]
 
     dt = 0.25
     frames = []
     base_pitch = float(env_cfg["angle_deg"])
-    exit_mach = vessel_cfg["catapult_mach"] * (coil_charge / 100.0)
+    exit_mach = float(vessel_cfg["catapult_mach"] * (coil_charge / 100.0))
 
+    # 発射前シーケンス (5秒間)
     for step in range(20):
         t = -5.0 + step * dt
         eng_pre = float(np.clip((t + 1.8) / 1.8, 0.0, 0.7))
         clamp = float(np.clip((t + 0.4) / 0.4, 0.0, 1.0))
         frames.append({
-            "t": t,
+            "t": float(round(t, 2)),
             "phase": "CRYO_VENTING" if t < -3.0 else "LINEAR_COIL_CHARGE",
             "dist_m": 0.0, "alt_km": 0.04, "mach": 0.0, "vc": 0.0,
             "g": 1.0 + eng_pre * 0.9, "temp_k": 288.0 + eng_pre * 140.0,
             "clamp_open": clamp, "sabot_purge": 0.0, "booster_purge": 0.0, "fairing_purge": 0.0,
-            "wing_sweep": 0.0, "bay_open": 0.0, "ring_lift": 0.0, "rad_deploy": 0.0,
+            "gear_deploy": 0.0, "wing_sweep": 0.0, "bay_open": 0.0, "ring_lift": 0.0, "rad_deploy": 0.0,
             "nozzle_open": 0.2 + eng_pre * 0.5, "engine_power": eng_pre,
             "spark_arc": float(np.clip((t + 2.5) / 2.5, 0.0, 0.6)),
             "vapor_alpha": 0.0, "plasma_alpha": 0.0, "warp_charge": 0.0,
             "warp_lens": 0.0, "warp_active": 0.0, "warp_boom": 0.0,
-            "rcs_burst": 0.0, "tether_lock": 0.0, "pitch_deg": base_pitch,
-            "yaw_deg": 0.0, "vib": eng_pre * 0.12, "progress": 0.0, "ship_time": 0.0,
+            "rcs_burst": 0.0, "tether_lock": 0.0, "shield_hit": 0.0,
+            "pitch_deg": base_pitch, "yaw_deg": 0.0, "roll_deg": 0.0,
+            "vib": eng_pre * 0.12, "progress": 0.0, "ship_time": 0.0,
         })
 
     dist_m = 0.0
@@ -239,11 +242,13 @@ def build_timeline(preview_only=False):
     sabot_p = 0.0
     booster_p = 0.0
     fairing_p = 0.0
+    gear_d = 0.0
     bay_o = 0.0
     ring_l = 0.0
     rad_d = 0.0
 
-    for step in range(240):
+    total_steps = 260
+    for step in range(total_steps):
         t = step * dt
         rad_pitch = np.radians(base_pitch)
         vapor = 0.0
@@ -255,72 +260,78 @@ def build_timeline(preview_only=False):
         w_boom = 0.0
         rcs = 0.0
         tether = 0.0
+        shield = 0.0
         vib = 0.0
+        pitch_cur = base_pitch
         yaw_deg = 0.0
+        roll_deg = 0.0
 
-        if t <= 3.2:
+        if t <= 5.0:
             phase = "CATAPULT_RAIL_ACCEL"
-            accel_ratio = t / 3.2
-            mach = (accel_ratio**1.25) * exit_mach
+            accel_ratio = t / 5.0
+            mach = (accel_ratio**1.3) * exit_mach
             speed_ms = mach * 340.0
-            dist_m += speed_ms * dt * 0.50
+            dist_m += speed_ms * dt * 0.45
             alt_km = 0.04 + (dist_m * np.sin(rad_pitch)) / 1000.0
-            g_load = 15.0 * (coil_charge / 100.0)
+            g_load = 12.0 * (coil_charge / 100.0)
             eng_pwr = 1.0
             nozzle = 0.95
             spark_arc = 1.0
             wing_sw = float(np.clip((mach - 1.5) / 10.0, 0.0, 1.0))
-            if 0.85 <= mach <= 2.2:
-                vapor = float(1.0 - abs(mach - 1.5) / 0.7)
+            if 0.85 <= mach <= 2.4:
+                vapor = float(1.0 - abs(mach - 1.6) / 0.8)
             vib = 0.28 + vapor * 0.35
             pitch_cur = base_pitch
-        elif alt_km < 75.0 and t < 8.2:
-            phase = "STRATOSPHERE_CLIMB" if alt_km < 40.0 else "EXOSPHERE_INSERTION"
-            sabot_p = min(1.0, sabot_p + 1.2 * dt)
-            mach = min(42.0, mach + 5.5 * dt)
+
+        elif alt_km < 90.0 and t < 15.0:
+            phase = "STRATOSPHERE_CLIMB" if alt_km < 45.0 else "EXOSPHERE_INSERTION"
+            sabot_p = min(1.0, sabot_p + 1.0 * dt)
+            mach = min(45.0, mach + 4.0 * dt)
             speed_ms = mach * 340.0
-            dist_m += speed_ms * dt * 0.85
-            space_f = float(np.clip((alt_km - 10.0) / 65.0, 0.0, 1.0))
-            pitch_boost = 6.0 if alt_km < 25.0 else 0.0
-            pitch_cur = max(16.0, (base_pitch + pitch_boost) * (1.0 - space_f * 0.55))
+            dist_m += speed_ms * dt * 0.75
+            space_f = float(np.clip((alt_km - 10.0) / 75.0, 0.0, 1.0))
+            pitch_cur = max(14.0, base_pitch * (1.0 - space_f * 0.6))
             alt_km += (speed_ms * np.sin(np.radians(pitch_cur)) * dt) / 1000.0
-            g_load = 6.8
+            g_load = 5.8
             eng_pwr = 1.0
             nozzle = 1.0
             wing_sw = 1.0
-            if 10.0 <= alt_km <= 70.0:
-                plasma = float(np.sin(((alt_km - 10.0) / 60.0) * np.pi) ** 0.75)
-            if alt_km >= 35.0 and aux_boosters:
-                booster_p = min(1.0, booster_p + 0.9 * dt)
-                if booster_p < 0.4:
+            roll_deg = np.sin(t * 0.8) * 8.0
+            if 12.0 <= alt_km <= 75.0:
+                plasma = float(np.sin(((alt_km - 12.0) / 63.0) * np.pi) ** 0.75)
+            if alt_km >= 50.0 and aux_boosters:
+                booster_p = min(1.0, booster_p + 0.8 * dt)
+                if booster_p < 0.5:
                     rcs = 1.0
             vib = plasma * 0.45 + 0.12
-        elif progress < 0.12:
+
+        elif progress < 0.16:
             phase = "WARP_FIELD_COMPRESSION"
-            alt_km = 95.0 + (progress / 0.12) * 205.0
-            pitch_cur = max(0.0, 16.0 * (1.0 - progress / 0.12))
-            eng_pwr = 0.65
-            nozzle = 0.75
+            alt_km = 120.0 + (progress / 0.16) * 280.0
+            pitch_cur = max(0.0, 14.0 * (1.0 - progress / 0.16))
+            eng_pwr = 0.7
+            nozzle = 0.8
             g_load = 1.8
-            wing_sw = 0.5
-            progress += 0.038 * dt * 4.0
-            morph_prog = float(np.clip(progress / 0.12, 0.0, 1.0))
-            bay_o = float(np.clip(morph_prog * 2.5, 0.0, 1.0))
-            ring_l = float(np.clip((morph_prog - 0.25) * 2.2, 0.0, 1.0))
-            rad_d = float(np.clip((morph_prog - 0.45) * 2.0, 0.0, 1.0))
+            wing_sw = 0.4
+            progress += 0.018 * dt
+            morph_prog = float(np.clip(progress / 0.16, 0.0, 1.0))
+            bay_o = float(np.clip(morph_prog * 2.2, 0.0, 1.0))
+            ring_l = float(np.clip((morph_prog - 0.2) * 2.0, 0.0, 1.0))
+            rad_d = float(np.clip((morph_prog - 0.4) * 1.8, 0.0, 1.0))
             if vessel_cfg["style"] == "massdriver_spear":
-                fairing_p = min(1.0, fairing_p + 1.2 * dt)
-            w_charge = float(np.clip((morph_prog - 0.20) / 0.80, 0.0, 1.0))
-            if morph_prog > 0.55:
-                w_lens = float(np.sin(((morph_prog - 0.55) / 0.45) * (np.pi / 2)))
-            if morph_prog > 0.88:
+                fairing_p = min(1.0, fairing_p + 1.0 * dt)
+            w_charge = float(np.clip((morph_prog - 0.15) / 0.85, 0.0, 1.0))
+            if morph_prog > 0.5:
+                w_lens = float(np.sin(((morph_prog - 0.5) / 0.5) * (np.pi / 2)))
+            if morph_prog > 0.92:
                 w_boom = 1.0
-            rcs = 1.0 if morph_prog < 0.35 else 0.0
+            rcs = 1.0 if (0.1 < morph_prog < 0.35) else 0.0
             vc = 0.05 + w_charge * 0.25
-            vib = 0.15 + w_charge * 0.25
+            vib = 0.12 + w_charge * 0.22
+
         elif progress < flip_timing:
             phase = "ALCUBIERRE_HYPER_WARP"
-            alt_km = 300.0 + (progress - 0.12) * 500000.0
+            alt_km = 400.0 + (progress - 0.16) * 500000.0
             pitch_cur = 0.0
             bay_o = 1.0
             ring_l = 1.0
@@ -328,67 +339,112 @@ def build_timeline(preview_only=False):
             wing_sw = 1.0
             eng_pwr = 1.0
             nozzle = 1.0
-            target_vc = min(0.996, 0.50 + (warp_factor / 10.0) * 0.49)
-            vc = min(target_vc, vc + 0.45 * dt)
+            target_vc = min(0.996, 0.55 + (warp_factor / 10.0) * 0.44)
+            vc = min(target_vc, vc + 0.15 * dt)
             w_active = 1.0
             w_charge = 1.0
             g_load = 1.2
-            vib = 0.08
-            progress += (vc * 0.095) * dt * 4.0
-            if progress >= flip_timing - 0.03:
+            vib = 0.06
+            progress += (0.016 + vc * 0.038) * dt
+            roll_deg = np.sin(t * 0.3) * 4.0
+            if progress >= flip_timing - 0.02:
                 w_boom = 1.0
-        else:
+
+        elif progress < 0.88:
             phase = "DEBRIS_RETRO_BRAKING"
             alt_km = 99999.0
-            rem = max(0.0001, 1.0 - progress)
-            raw_flip = float(np.clip((progress - flip_timing) / 0.06, 0.0, 1.0))
+            flip_span = 0.06
+            raw_flip = float(np.clip((progress - flip_timing) / flip_span, 0.0, 1.0))
             flip_prog = raw_flip * raw_flip * (3.0 - 2.0 * raw_flip)
             yaw_deg = flip_prog * 180.0
-            pitch_cur = 0.0
-            rcs = 1.0 if (flip_prog < 0.25 or (0.75 < flip_prog < 1.0)) else 0.0
-            if rem < 0.08:
-                w_boom = max(0.0, 1.0 - (0.08 - rem) * 15.0)
-            vc = max(0.004, min(vc, rem * 4.2))
-            eng_pwr = 1.0 if flip_prog > 0.65 else 0.2
+            roll_deg = np.sin(flip_prog * np.pi) * 85.0
+            pitch_cur = np.sin(flip_prog * np.pi) * 12.0
+            rcs = 1.0 if (flip_prog < 0.3 or (0.7 < flip_prog < 1.0)) else 0.0
+
+            eng_pwr = 1.0 if flip_prog > 0.7 else 0.25
             nozzle = 1.0
-            g_load = 5.2 if flip_prog > 0.65 else 2.2
+            g_load = 6.0 if flip_prog > 0.7 else 2.0
             bay_o = 1.0
-            ring_l = max(0.3, vc * 1.5)
+            ring_l = 0.4
             rad_d = 1.0
-            wing_sw = 0.15
-            vib = 0.20 if eng_pwr > 0.5 else 0.03
-            if progress > 0.88:
-                tether = float(np.clip((progress - 0.88) / 0.11, 0.0, 1.0))
-            progress = min(1.0, progress + max(0.004, vc * 0.065) * dt * 4.0)
+            wing_sw = 0.2
+            vc = max(0.01, vc * 0.95)
+            vib = 0.22 if eng_pwr > 0.5 else 0.05
+            progress += 0.022 * dt
+
+            if progress > 0.80 and progress < 0.86:
+                shield = float(np.sin((progress - 0.80) / 0.06 * np.pi * 3) ** 2)
+
+        elif progress < 0.96:
+            phase = "ATMOSPHERIC_ENTRY_DESCENT"
+            descent_p = (progress - 0.88) / 0.08
+            alt_km = float(np.clip(180.0 * (1.0 - descent_p), 1.5, 180.0))
+            mach = float(max(1.2, 18.0 * (1.0 - descent_p)))
+            vc = 0.0
+            pitch_cur = 25.0 * (1.0 - descent_p) - 10.0 * descent_p
+            yaw_deg = 180.0
+            roll_deg = np.sin(descent_p * np.pi * 2.0) * 12.0
+            plasma = float(np.sin(descent_p * np.pi) ** 1.2) if descent_p < 0.7 else 0.0
+            vapor = float(np.sin(descent_p * np.pi) ** 1.5) if descent_p >= 0.5 else 0.0
+            g_load = 4.5 * (1.0 - descent_p * 0.5)
+            eng_pwr = 0.85
+            nozzle = 0.9
+            bay_o = max(0.0, 1.0 - descent_p * 2.0)
+            ring_l = 0.0
+            rad_d = max(0.0, 1.0 - descent_p * 1.5)
+            wing_sw = 0.0
+            vib = plasma * 0.5 + 0.15
+            progress += 0.016 * dt
+
+        else:
+            phase = "FINAL_DESCENT_TOUCHDOWN"
+            landing_p = (progress - 0.96) / 0.04
+            alt_km = float(max(0.0, 1.5 * (1.0 - landing_p)))
+            mach = float(max(0.0, 1.2 * (1.0 - landing_p)))
+            vc = 0.0
+            pitch_cur = float(-10.0 * (1.0 - landing_p))
+            yaw_deg = 180.0
+            roll_deg = 0.0
+            gear_d = float(np.clip(landing_p * 2.5, 0.0, 1.0))
+            g_load = 1.0 + float(np.sin(landing_p * np.pi)) * 1.5
+            eng_pwr = float(np.clip(1.2 * (1.0 - landing_p), 0.0, 1.0))
+            nozzle = 0.4
+            vib = 0.18 * (1.0 - landing_p)
+            rcs = 1.0 if landing_p < 0.8 else 0.0
+            tether = 1.0 if landing_p > 0.85 else 0.0
+            progress = min(1.0, progress + 0.012 * dt)
 
         gamma = 1.0 / np.sqrt(max(0.001, 1.0 - (min(0.999, vc) ** 2)))
         ship_time += dt / gamma
-        temp_k = 288.0 + plasma * 1650.0 + (w_active * 620.0) + (eng_pwr * 240.0)
+        temp_k = 288.0 + plasma * 1750.0 + (w_active * 600.0) + (eng_pwr * 220.0)
 
         frames.append({
-            "t": float(t), "phase": phase, "dist_m": float(dist_m), "alt_km": float(alt_km),
+            "t": float(round(t, 2)), "phase": phase, "dist_m": float(dist_m), "alt_km": float(alt_km),
             "mach": float(mach), "vc": float(vc), "g": float(g_load), "temp_k": float(temp_k),
             "clamp_open": 1.0, "sabot_purge": float(sabot_p), "booster_purge": float(booster_p),
-            "fairing_purge": float(fairing_p), "wing_sweep": float(wing_sw), "bay_open": float(bay_o),
-            "ring_lift": float(ring_l), "rad_deploy": float(rad_d), "nozzle_open": float(nozzle),
-            "engine_power": float(eng_pwr), "spark_arc": float(spark_arc), "vapor_alpha": float(vapor),
-            "plasma_alpha": float(plasma), "warp_charge": float(w_charge), "warp_lens": float(w_lens),
-            "warp_active": float(w_active), "warp_boom": float(w_boom), "rcs_burst": float(rcs),
-            "tether_lock": float(tether), "pitch_deg": float(pitch_cur), "yaw_deg": float(yaw_deg),
+            "fairing_purge": float(fairing_p), "gear_deploy": float(gear_d), "wing_sweep": float(wing_sw),
+            "bay_open": float(bay_o), "ring_lift": float(ring_l), "rad_deploy": float(rad_d),
+            "nozzle_open": float(nozzle), "engine_power": float(eng_pwr), "spark_arc": float(spark_arc),
+            "vapor_alpha": float(vapor), "plasma_alpha": float(plasma), "warp_charge": float(w_charge),
+            "warp_lens": float(w_lens), "warp_active": float(w_active), "warp_boom": float(w_boom),
+            "rcs_burst": float(rcs), "tether_lock": float(tether), "shield_hit": float(shield),
+            "pitch_deg": float(pitch_cur), "yaw_deg": float(yaw_deg), "roll_deg": float(roll_deg),
             "vib": float(vib), "progress": float(progress), "ship_time": float(ship_time),
         })
 
-        if progress >= 0.998:
-            for extra in range(16):
+        if progress >= 1.0:
+            for extra in range(20):
                 frames.append({
-                    "t": float(t + (extra + 1) * dt), "phase": "STARGATE_DOCKING_LOCKED",
-                    "dist_m": float(dist_m), "alt_km": 99999.0, "mach": 0.0, "vc": 0.0, "g": 0.0,
-                    "temp_k": 330.0, "clamp_open": 1.0, "sabot_purge": 1.0, "booster_purge": float(booster_p),
-                    "fairing_purge": float(fairing_p), "wing_sweep": 0.0, "bay_open": 0.5, "ring_lift": 0.2,
-                    "rad_deploy": 1.0, "nozzle_open": 0.2, "engine_power": 0.0, "spark_arc": 0.0,
-                    "vapor_alpha": 0.0, "plasma_alpha": 0.0, "warp_charge": 0.0, "warp_lens": 0.0,
-                    "warp_active": 0.0, "warp_boom": 0.0, "rcs_burst": 0.0, "tether_lock": 1.0,
-                    "pitch_deg": 0.0, "yaw_deg": 180.0, "vib": 0.0, "progress": 1.0, "ship_time": float(ship_time),
+                    "t": float(round(t + (extra + 1) * dt, 2)), "phase": "PLANETARY_LANDING_TOUCHDOWN",
+                    "dist_m": float(dist_m), "alt_km": 0.0, "mach": 0.0, "vc": 0.0, "g": 1.0,
+                    "temp_k": 320.0, "clamp_open": 1.0, "sabot_purge": 1.0, "booster_purge": float(booster_p),
+                    "fairing_purge": float(fairing_p), "gear_deploy": 1.0, "wing_sweep": 0.0,
+                    "bay_open": 0.0, "ring_lift": 0.0, "rad_deploy": 1.0, "nozzle_open": 0.2,
+                    "engine_power": 0.0, "spark_arc": 0.0, "vapor_alpha": 0.0, "plasma_alpha": 0.0,
+                    "warp_charge": 0.0, "warp_lens": 0.0, "warp_active": 0.0, "warp_boom": 0.0,
+                    "rcs_burst": 0.0, "tether_lock": 1.0, "shield_hit": 0.0,
+                    "pitch_deg": 0.0, "yaw_deg": 180.0, "roll_deg": 0.0,
+                    "vib": 0.0, "progress": 1.0, "ship_time": float(ship_time),
                 })
             break
 
@@ -433,7 +489,7 @@ sim_config = {
 }
 
 # =========================================================================
-# 📺 Three.js 完全映画仕様・極限細密＆ド迫力チェイス版 (Apex VFX Cinema Edition V5)
+# 📺 Three.js 完全映画仕様・極限細密＆ド迫力チェイス版 (Apex VFX Cinema Edition V6)
 # =========================================================================
 html_code = """<!DOCTYPE html>
 <html>
@@ -448,7 +504,7 @@ body,html{
 }
 #webgl-canvas{
   width:100%;height:100%;display:block;position:absolute;top:0;left:0;
-  z-index:1;pointer-events:none;touch-action:pan-y;
+  z-index:1;touch-action:none;
 }
 .letterbox-top{position:absolute;top:0;left:0;width:100%;height:14px;background:#000;z-index:90;pointer-events:none;}
 .letterbox-bottom{position:absolute;bottom:0;left:0;width:100%;height:14px;background:#000;z-index:90;pointer-events:none;}
@@ -468,9 +524,19 @@ body,html{
 .hud-group{display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:11px;letter-spacing:1px;}
 .badge{background:rgba(14,165,233,0.18);border:1px solid #38bdf8;color:#38bdf8;padding:2px 8px;border-radius:3px;font-weight:800;}
 
+/* シネマティック・フェーズ大テロップ */
+#cinematic-banner{
+  position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;z-index:85;opacity:0;transition:opacity 0.6s ease;
+  text-shadow:0 0 25px rgba(56,189,248,0.8);
+}
+.cine-stage{font-size:13px;letter-spacing:4px;color:#38bdf8;font-weight:800;margin-bottom:4px;}
+.cine-title{font-size:28px;letter-spacing:6px;color:#ffffff;font-weight:900;text-transform:uppercase;}
+
 /* 英語字幕ライブティッカー */
 #subtitle-box{
-  position:absolute;bottom:156px;left:20px;
+  position:absolute;bottom:170px;left:20px;
   background:rgba(2,6,23,0.88);border-left:3px solid #10b981;
   padding:6px 14px;border-radius:3px;font-size:11px;font-family:monospace;
   color:#6ee7b7;letter-spacing:1.2px;box-shadow:0 4px 15px rgba(0,0,0,0.8);
@@ -479,9 +545,9 @@ body,html{
 
 .pip-window{
   position:absolute;top:70px;right:18px;
-  width:360px;height:202px;
+  width:340px;height:190px;
   border:2px solid rgba(56,189,248,0.85);border-radius:6px;
-  background:rgba(2,6,23,0.35);
+  background:rgba(2,6,23,0.45);
   backdrop-filter:contrast(1.25) saturate(0.85);
   box-shadow:0 12px 35px rgba(0,0,0,0.95);
   cursor:pointer;overflow:hidden;transition:all 0.25s ease;
@@ -496,9 +562,35 @@ body,html{
 .rec-dot{width:5px;height:5px;border-radius:50%;background:#f43f5e;animation:pulse 1s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.15;}}
 
+/* タイムライン・シークバー＆再生コントローラー */
+.playback-controller{
+  position:absolute;bottom:148px;left:20px;right:20px;
+  display:flex;align-items:center;gap:12px;background:rgba(2,6,23,0.78);
+  border:1px solid rgba(56,189,248,0.3);padding:6px 14px;border-radius:6px;
+  z-index:50;pointer-events:auto;backdrop-filter:blur(6px);
+}
+.play-btn{
+  background:#0284c7;border:none;color:#fff;font-size:11px;font-weight:800;
+  padding:4px 10px;border-radius:4px;cursor:pointer;outline:none;
+}
+.play-btn:hover{background:#0369a1;}
+.speed-btn{
+  background:rgba(15,23,42,0.8);border:1px solid rgba(56,189,248,0.4);
+  color:#38bdf8;font-size:10px;font-weight:700;padding:4px 8px;border-radius:4px;cursor:pointer;
+}
+.speed-btn.active{background:#38bdf8;color:#020617;}
+.scrub-slider{
+  flex:1;-webkit-appearance:none;height:5px;border-radius:3px;
+  background:rgba(56,189,248,0.25);outline:none;cursor:pointer;
+}
+.scrub-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:#38bdf8;cursor:pointer;box-shadow:0 0 8px #38bdf8;
+}
+
 .radar-panel{
-  position:absolute;bottom:70px;left:0;
-  width:100%;height:78px;
+  position:absolute;bottom:68px;left:0;
+  width:100%;height:76px;
   background:rgba(2,6,20,0.92);
   border-top:1px solid rgba(56,189,248,0.45);
   border-bottom:1px solid rgba(56,189,248,0.2);
@@ -506,10 +598,10 @@ body,html{
   z-index:25;pointer-events:none;box-shadow:0 -6px 25px rgba(0,0,0,0.75);
 }
 .radar-tag{font-size:9.5px;color:#38bdf8;font-weight:900;white-space:nowrap;letter-spacing:1px;border-right:1px solid rgba(56,189,248,0.3);padding-right:12px;}
-#radar-canvas{flex:1;height:64px;display:block;}
+#radar-canvas{flex:1;height:62px;display:block;}
 
 .hud-bottom{
-  position:absolute;bottom:14px;left:0;width:100%;height:56px;
+  position:absolute;bottom:14px;left:0;width:100%;height:54px;
   background:linear-gradient(0deg,rgba(2,6,18,0.94) 0%,rgba(6,13,30,0.82) 100%);
   border-top:1px solid rgba(148,163,184,0.2);
   display:grid;grid-template-columns:repeat(5,1fr);align-items:center;
@@ -520,14 +612,14 @@ body,html{
 .metric-val{font-size:15px;font-weight:900;color:#f8fafc;margin-top:1px;}
 
 #complete-banner{
-  display:none;position:absolute;top:230px;left:50%;transform:translateX(-50%);
+  display:none;position:absolute;top:220px;left:50%;transform:translateX(-50%);
   background:rgba(6,78,59,0.95);border:2px solid #10b981;
   padding:16px 36px;border-radius:8px;text-align:center;z-index:70;
   box-shadow:0 0 60px rgba(16,185,129,0.7);pointer-events:none;
 }
 
 .cam-switcher{
-  position:absolute;bottom:156px;right:20px;display:flex;gap:6px;z-index:50;pointer-events:auto;
+  position:absolute;top:70px;left:20px;display:flex;gap:6px;z-index:50;pointer-events:auto;
 }
 .cam-btn{
   background:rgba(15,23,42,0.88);border:1px solid rgba(56,189,248,0.5);color:#38bdf8;
@@ -557,6 +649,11 @@ body,html{
   </div>
 </div>
 
+<div id="cinematic-banner">
+  <div id="cine-stage" class="cine-stage">STAGE 01</div>
+  <div id="cine-title" class="cine-title">CATAPULT LAUNCH</div>
+</div>
+
 <div id="subtitle-box">COMMS // READY FOR SYSTEM INITIALIZATION</div>
 
 <div id="pip-box" class="pip-window" title="クリックでサブモニター折りたたみ">
@@ -577,14 +674,22 @@ body,html{
   <button id="cam-btn-4" class="cam-btn" onclick="switchCamMode(4)">FLY-BY SPOT</button>
 </div>
 
+<div class="playback-controller">
+  <button id="play-pause-btn" class="play-btn">PAUSE</button>
+  <button id="speed-02" class="speed-btn">0.2x</button>
+  <button id="speed-10" class="speed-btn active">1.0x</button>
+  <button id="speed-20" class="speed-btn">2.0x</button>
+  <input type="range" id="timeline-slider" class="scrub-slider" min="0" max="100" value="0" step="0.1">
+</div>
+
 <div class="radar-panel">
   <div id="radar-label" class="radar-tag">TACTICAL RADAR<br><span style="color:#94a3b8;font-size:8px;">ORBITAL PROJECTION</span></div>
   <canvas id="radar-canvas"></canvas>
 </div>
 
 <div id="complete-banner">
-  <div style="font-size:18px;font-weight:900;color:#6ee7b7;letter-spacing:1.5px;">STARGATE MAGNETIC ARREST COMPLETE</div>
-  <div style="font-size:11px;color:#d1fae5;margin-top:4px;">ALL HYPER-DRIVE SUBSYSTEMS NOMINAL / DOCKING LOCKED</div>
+  <div style="font-size:18px;font-weight:900;color:#6ee7b7;letter-spacing:1.5px;">PLANETARY TOUCHDOWN COMPLETE</div>
+  <div style="font-size:11px;color:#d1fae5;margin-top:4px;">ALL HYPER-DRIVE SUBSYSTEMS SHUTDOWN / SURFACE LOCK SECURED</div>
 </div>
 
 <div class="hud-bottom">
@@ -596,6 +701,7 @@ body,html{
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -616,7 +722,7 @@ let pipOpen = true;
 pipBox.addEventListener('click', (e) => {
     e.stopPropagation();
     pipOpen = !pipOpen;
-    pipBox.style.height = pipOpen ? '202px' : '26px';
+    pipBox.style.height = pipOpen ? '190px' : '26px';
     document.getElementById('pip-btn').innerText = pipOpen ? '[HIDE]' : '[SHOW]';
 });
 
@@ -633,7 +739,7 @@ window.switchCamMode = function(mode) {
 };
 
 // =========================================================================
-// 1. レンダラー構築＆PMREM IBL＆星雲パーティクル＆ポストプロセス
+// 1. レンダラー＆ポストプロセス＆OrbitControls
 // =========================================================================
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -644,23 +750,28 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-
 const baseFogColor = new THREE.Color(cfg.env.fog_color);
 scene.fog = new THREE.FogExp2(baseFogColor, cfg.env.fog_density);
 
-const cameraMain = new THREE.PerspectiveCamera(46, W / H, 0.5, 950000);
-const cameraPip = new THREE.PerspectiveCamera(36, 16 / 9, 0.5, 950000);
+const cameraMain = new THREE.PerspectiveCamera(55, W / H, 0.5, 980000);
+const cameraPip = new THREE.PerspectiveCamera(36, 16 / 9, 0.5, 980000);
 
-let baseCamPos = new THREE.Vector3(-18.0, 7.5, -46.0);
-let baseTarget = new THREE.Vector3(0.0, 1.0, -2.0);
+// 改良点①: メインカメラ基準位置を大幅に引き、全体を見渡せる構図へ
+let baseCamPos = new THREE.Vector3(-35.0, 16.0, -95.0);
+let baseTarget = new THREE.Vector3(0.0, 1.5, -4.0);
 
 if (cfg.cam_preset.includes("エクストラ")) {
-    baseCamPos.set(-36.0, 15.0, -78.0);
+    baseCamPos.set(-52.0, 24.0, -135.0);
 } else if (cfg.cam_preset.includes("チェイス")) {
-    baseCamPos.set(-14.0, 5.0, -36.0);
+    baseCamPos.set(-26.0, 11.0, -75.0);
 }
 cameraMain.position.copy(baseCamPos);
 cameraMain.lookAt(baseTarget);
+
+const controls = new THREE.OrbitControls(cameraMain, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.enabled = false;
 
 function makeSkyEnvTexture() {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
@@ -692,54 +803,28 @@ function createStarField(count, radiusMin, radiusMax, size, baseColor) {
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const c = new THREE.Color(baseColor);
-
     for (let i = 0; i < count; i++) {
-        const u = Math.random();
-        const v = Math.random();
+        const u = Math.random(), v = Math.random();
         const theta = u * 2.0 * Math.PI;
         const phi = Math.acos(2.0 * v - 1.0);
         const r = radiusMin + Math.random() * (radiusMax - radiusMin);
-
         pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
         pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         pos[i * 3 + 2] = r * Math.cos(phi);
-
         const variation = 0.7 + Math.random() * 0.6;
-        col[i * 3] = c.r * variation;
-        col[i * 3 + 1] = c.g * variation;
-        col[i * 3 + 2] = c.b * variation;
+        col[i * 3] = c.r * variation; col[i * 3 + 1] = c.g * variation; col[i * 3 + 2] = c.b * variation;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    const mat = new THREE.PointsMaterial({
-        size: size,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.9,
-        sizeAttenuation: false
-    });
-    return new THREE.Points(geo, mat);
+    return new THREE.Points(geo, new THREE.PointsMaterial({ size: size, vertexColors: true, transparent: true, opacity: 0.9, sizeAttenuation: false }));
 }
-
-const deepStars = createStarField(4000, 250000, 600000, 1.8, 0xdbeafe);
-const nebulaDust = createStarField(2500, 150000, 450000, 2.5, 0x38bdf8);
-const milkyWayStars = createStarField(3000, 100000, 300000, 1.4, 0xf472b6);
-spaceFieldGroup.add(deepStars);
-spaceFieldGroup.add(nebulaDust);
-spaceFieldGroup.add(milkyWayStars);
+spaceFieldGroup.add(createStarField(4000, 250000, 600000, 1.8, 0xdbeafe));
+spaceFieldGroup.add(createStarField(2500, 150000, 450000, 2.5, 0x38bdf8));
+spaceFieldGroup.add(createStarField(3000, 100000, 300000, 1.4, 0xf472b6));
 
 const sunLight = new THREE.DirectionalLight(cfg.env.sun_color, cfg.env.sun_int);
 sunLight.position.set(cfg.env.sun_pos[0] * 0.15, cfg.env.sun_pos[1] * 0.15 + 40.0, cfg.env.sun_pos[2] * 0.15);
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-sunLight.shadow.camera.near = 10;
-sunLight.shadow.camera.far = 800;
-sunLight.shadow.camera.left = -90;
-sunLight.shadow.camera.right = 90;
-sunLight.shadow.camera.top = 90;
-sunLight.shadow.camera.bottom = -90;
-sunLight.shadow.bias = -0.0005;
 scene.add(sunLight);
 
 const rimLight = new THREE.DirectionalLight(0x93c5fd, 2.0);
@@ -749,69 +834,47 @@ scene.add(rimLight);
 const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x0f172a, 1.8);
 scene.add(hemiLight);
 
+// 改良点⑤: バレットタイム光彩反転・時空歪曲シェーダー
 const WarpDistortionShader = {
     uniforms: {
         "tDiffuse": { value: null },
         "uDistort": { value: 0.0 },
+        "uInvert": { value: 0.0 },
         "uTime": { value: 0.0 },
-        "uDroplets": { value: 0.0 },
         "uGForce": { value: 0.0 }
     },
     vertexShader: `
         varying vec2 vUv;
-        void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform float uDistort;
+        uniform float uInvert;
         uniform float uTime;
-        uniform float uDroplets;
         uniform float uGForce;
         varying vec2 vUv;
-
-        float random(vec2 p) {
-            return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-        }
-
         void main() {
             vec2 center = vec2(0.5, 0.5);
-            vec2 uv = vUv;
-            vec2 dir = uv - center;
+            vec2 dir = vUv - center;
             float dist = length(dir);
-
             float ringDistort = sin(dist * 18.0 - uTime * 4.0) * exp(-dist * 3.5) * uDistort * 0.05;
-            vec2 rUv = uv + dir * (dist * uDistort * 0.09 + ringDistort);
-            vec2 gUv = uv;
-            vec2 bUv = uv - dir * (dist * uDistort * 0.09 + ringDistort);
-
-            if (uDroplets > 0.01) {
-                float drop = sin(uv.x * 65.0) * cos(uv.y * 65.0);
-                if (drop > 0.88) {
-                    vec2 dropOffset = vec2(cos(drop * 20.0), sin(drop * 20.0)) * 0.015 * uDroplets;
-                    rUv += dropOffset; gUv += dropOffset; bUv += dropOffset;
-                }
-            }
+            vec2 rUv = vUv + dir * (dist * uDistort * 0.09 + ringDistort);
+            vec2 gUv = vUv;
+            vec2 bUv = vUv - dir * (dist * uDistort * 0.09 + ringDistort);
 
             float r = texture2D(tDiffuse, rUv).r;
             float g = texture2D(tDiffuse, gUv).g;
             float b = texture2D(tDiffuse, bUv).b;
             vec3 col = vec3(r, g, b);
 
-            float grain = (random(uv * 1000.0 + uTime) - 0.5) * 0.035;
-            col += grain;
+            if (uInvert > 0.01) {
+                vec3 inv = vec3(1.0) - col;
+                col = mix(col, inv, uInvert);
+            }
 
             float vig = smoothstep(0.85, 0.25, dist);
             col *= vig;
-
-            if (uGForce > 3.0) {
-                float gFactor = clamp((uGForce - 3.0) / 12.0, 0.0, 0.85);
-                float tunnel = smoothstep(0.9 - gFactor * 0.45, 0.25, dist);
-                col = mix(col, vec3(0.0), (1.0 - tunnel) * gFactor);
-            }
-
             gl_FragColor = vec4(col, 1.0);
         }
     `
@@ -836,27 +899,33 @@ function resizeRadarCanvas() {
 }
 resizeRadarCanvas();
 
-window.addEventListener('resize', () => {
+function updateCameraAspect() {
     W = window.innerWidth; H = window.innerHeight;
     renderer.setSize(W, H);
     composerMain.setSize(W, H);
-    cameraMain.aspect = W / H;
+    const aspect = W / H;
+    cameraMain.aspect = aspect;
+    // 改良点①: スマホ縦長画面での主翼見切れ防止オートアスペクト補正
+    if (aspect < 1.0) {
+        cameraMain.fov = 68.0;
+    } else {
+        cameraMain.fov = 55.0;
+    }
     cameraMain.updateProjectionMatrix();
     resizeRadarCanvas();
-});
+}
+window.addEventListener('resize', updateCameraAspect);
+updateCameraAspect();
 
 // =========================================================================
-// 2. ネイティブ英語音声合成＆字幕ティッカー＆Web Audioシンセ
+// 2. 音声合成＆大テロップ＆Web Audio
 // =========================================================================
-let actx = null, rocketGain = null, rocketFilter = null, coilOsc = null, coilGain = null, warpOsc = null, warpGain = null, rcsGain = null;
+let actx = null, rocketGain = null, rocketFilter = null, coilOsc = null, coilGain = null, warpGain = null, rcsGain = null;
 let lastAnnouncedPhase = "";
-let hasTriggeredBoom = false;
 let availableVoices = [];
 
 function updateVoiceList() {
-    if ('speechSynthesis' in window) {
-        availableVoices = window.speechSynthesis.getVoices();
-    }
+    if ('speechSynthesis' in window) availableVoices = window.speechSynthesis.getVoices();
 }
 if ('speechSynthesis' in window) {
     updateVoiceList();
@@ -864,26 +933,18 @@ if ('speechSynthesis' in window) {
 }
 
 const subtitleEl = document.getElementById('subtitle-box');
+const cineBannerEl = document.getElementById('cinematic-banner');
+const cineStageEl = document.getElementById('cine-stage');
+const cineTitleEl = document.getElementById('cine-title');
 
-function playRadioBeep() {
-    if (!actx) return;
-    try {
-        const o = actx.createOscillator();
-        const g = actx.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(880, actx.currentTime);
-        o.frequency.setValueAtTime(1760, actx.currentTime + 0.04);
-        g.gain.setValueAtTime(0.08, actx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.12);
-        o.connect(g);
-        g.connect(actx.destination);
-        o.start();
-        o.stop(actx.currentTime + 0.13);
-    } catch(e){}
+function showCinematicBanner(stage, title) {
+    cineStageEl.innerText = stage;
+    cineTitleEl.innerText = title;
+    cineBannerEl.style.opacity = '1.0';
+    setTimeout(() => { cineBannerEl.style.opacity = '0.0'; }, 3200);
 }
 
 function speakCallout(text) {
-    playRadioBeep();
     if (subtitleEl) {
         subtitleEl.innerText = `COMMS // "${text}"`;
         subtitleEl.style.opacity = '1.0';
@@ -894,12 +955,12 @@ function speakCallout(text) {
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'en-US';
             if (availableVoices.length === 0) availableVoices = window.speechSynthesis.getVoices();
-            const enVoice = availableVoices.find(v => (v.lang === 'en-US' || v.lang === 'en_US') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('David')))
+            const enVoice = availableVoices.find(v => (v.lang === 'en-US' || v.lang === 'en_US') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Zira') || v.name.includes('David')))
                          || availableVoices.find(v => v.lang.startsWith('en'));
             if (enVoice) u.voice = enVoice;
-            u.rate = 1.05;
+            u.rate = 1.0;
             u.pitch = 1.0;
-            u.volume = 0.92;
+            u.volume = 0.9;
             window.speechSynthesis.speak(u);
         }, 15);
     }
@@ -935,29 +996,21 @@ function initAudioSystem() {
         rocketGain.connect(actx.destination);
         whiteNoise.start(0);
 
-        const rcsFilter = actx.createBiquadFilter();
-        rcsFilter.type = 'highpass';
-        rcsFilter.frequency.value = 1200;
         rcsGain = actx.createGain();
         rcsGain.gain.value = 0.0001;
-        whiteNoise.connect(rcsFilter);
-        rcsFilter.connect(rcsGain);
+        whiteNoise.connect(rcsGain);
         rcsGain.connect(actx.destination);
 
         coilOsc = actx.createOscillator();
         coilOsc.type = 'sawtooth';
         coilOsc.frequency.value = 110;
-        const cFilter = actx.createBiquadFilter();
-        cFilter.type = 'bandpass';
-        cFilter.frequency.value = 460;
         coilGain = actx.createGain();
         coilGain.gain.value = 0.0001;
-        coilOsc.connect(cFilter);
-        cFilter.connect(coilGain);
+        coilOsc.connect(coilGain);
         coilGain.connect(actx.destination);
         coilOsc.start(0);
 
-        warpOsc = actx.createOscillator();
+        const warpOsc = actx.createOscillator();
         warpOsc.type = 'sine';
         warpOsc.frequency.value = 65;
         warpGain = actx.createGain();
@@ -967,131 +1020,42 @@ function initAudioSystem() {
         warpOsc.start(0);
     } catch(e){}
 }
-
-function playSonicBoomSound() {
-    if (!actx) return;
-    try {
-        const osc = actx.createOscillator();
-        const g = actx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(140, actx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(25, actx.currentTime + 0.6);
-        g.gain.setValueAtTime(0.8, actx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.7);
-        osc.connect(g);
-        g.connect(actx.destination);
-        osc.start();
-        osc.stop(actx.currentTime + 0.75);
-    } catch(e){}
-}
-
-initAudioSystem();
 window.addEventListener('pointerdown', () => { if (actx && actx.state === 'suspended') actx.resume(); }, { once: true });
-window.addEventListener('keydown', () => { if (actx && actx.state === 'suspended') actx.resume(); }, { once: true });
 
 // =========================================================================
-// 3. プロシージャルテクスチャ＆PBRマテリアル
+// 3. マテリアル＆PBRテクスチャ
 // =========================================================================
 function makeAztecHullTexture() {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+    const c = document.createElement('canvas'); c.width = 512; c.height = 512;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#475569'; ctx.fillRect(0, 0, 1024, 1024);
-
-    for (let x = 0; x < 1024; x += 64) {
-        for (let y = 0; y < 1024; y += 32) {
-            const v = 90 + Math.floor(Math.random() * 65);
+    ctx.fillStyle = '#475569'; ctx.fillRect(0, 0, 512, 512);
+    for (let x = 0; x < 512; x += 32) {
+        for (let y = 0; y < 512; y += 16) {
+            const v = 90 + Math.floor(Math.random() * 60);
             ctx.fillStyle = `rgb(${v},${v+3},${v+8})`;
-            ctx.fillRect(x + 2, y + 2, 60, 28);
-
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(x + 6, y + 6, 2, 2);
-            ctx.fillRect(x + 54, y + 6, 2, 2);
-            ctx.fillRect(x + 6, y + 22, 2, 2);
-            ctx.fillRect(x + 54, y + 22, 2, 2);
+            ctx.fillRect(x + 1, y + 1, 30, 14);
         }
     }
-    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5;
-    for (let x = 0; x <= 1024; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke(); }
-    for (let y = 0; y <= 1024; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
-
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(4, 4);
     return tex;
 }
-const hullPbrTex = makeAztecHullTexture();
+const hullTex = makeAztecHullTexture();
 
-function makeTileTexture() {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 512;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = '#020617'; ctx.lineWidth = 3;
-    for (let y = 0; y < 512; y += 16) {
-        const off = (y / 16) % 2 === 0 ? 0 : 12;
-        for (let x = -12; x < 512; x += 24) { ctx.strokeRect(x + off, y, 22, 14); }
-    }
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(8, 8);
-    return tex;
-}
-const tileTex = makeTileTexture();
-
-function makeRoughnessMap() {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 512;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 200; i++) {
-        const r = Math.floor(Math.random() * 180 + 50);
-        ctx.fillStyle = `rgb(${r},${r},${r})`;
-        ctx.fillRect(Math.random() * 512, Math.random() * 512, 32, 24);
-    }
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 4);
-    return tex;
-}
-const roughnessTex = makeRoughnessMap();
-
-function makeHeatStainTexture() {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-    const ctx = c.getContext('2d');
-    const grad = ctx.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0.0, '#38bdf8');
-    grad.addColorStop(0.35, '#818cf8');
-    grad.addColorStop(0.70, '#f59e0b');
-    grad.addColorStop(1.0, '#78350f');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 256, 256);
-    return new THREE.CanvasTexture(c);
-}
-const heatStainTex = makeHeatStainTexture();
-
-const matHull = new THREE.MeshPhysicalMaterial({
-    color: cfg.hull_color, metalness: cfg.metalness, roughness: cfg.roughness,
-    bumpMap: hullPbrTex, bumpScale: 0.04, roughnessMap: roughnessTex,
-    clearcoat: 0.9, clearcoatRoughness: 0.12, emissive: 0x000000, emissiveIntensity: 0.0
-});
-const matBellyTile = new THREE.MeshStandardMaterial({
-    color: cfg.belly_color, metalness: 0.35, roughness: 0.75,
-    bumpMap: tileTex, bumpScale: 0.06, roughnessMap: tileTex, emissive: 0x000000, emissiveIntensity: 0.0
-});
+const matHull = new THREE.MeshPhysicalMaterial({ color: cfg.hull_color, metalness: cfg.metalness, roughness: cfg.roughness, bumpMap: hullTex, bumpScale: 0.04 });
+const matBellyTile = new THREE.MeshStandardMaterial({ color: cfg.belly_color, metalness: 0.35, roughness: 0.75 });
 const matTitaniumFrame = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.92, roughness: 0.20 });
-const matPistonRod = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.98, roughness: 0.05 });
 const matDarkAlloy = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.22 });
-const matGoldMLI = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.96, roughness: 0.20, bumpMap: tileTex, bumpScale: 0.02 });
+const matGoldMLI = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.96, roughness: 0.20 });
 const matCopperCoil = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.95, roughness: 0.15 });
-const matCanopy = new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, metalness: 0.95, roughness: 0.03, transparent: true, opacity: 0.42, clearcoat: 1.0 });
-const matRadiator = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.82, roughness: 0.28, emissive: 0xef4444, emissiveIntensity: 0.0 });
-const matConcreteWet = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.35, bumpMap: hullPbrTex, bumpScale: 0.06 });
-const matCryoPipe = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.65, metalness: 0.25 });
-const matHeatStain = new THREE.MeshStandardMaterial({ map: heatStainTex, metalness: 0.85, roughness: 0.25 });
+const matCanopy = new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, metalness: 0.95, roughness: 0.03, transparent: true, opacity: 0.45 });
+const matRadiator = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.82, roughness: 0.28 });
 
 // =========================================================================
-// 4. 極限細密スプラインロフト宇宙船・二重ノズル＆推力偏向＆パイピング
+// 4. 宇宙船モデル＆補助ブースター＆着陸ギア＆3Dホログラム引き出し線UI
 // =========================================================================
 const radAngle = THREE.MathUtils.degToRad(cfg.env.angle_deg);
-
 const shipRoot = new THREE.Group();
 shipRoot.rotation.x = -radAngle;
 scene.add(shipRoot);
@@ -1102,915 +1066,53 @@ shipRoot.add(shipPitchGroup);
 const shipMeshGroup = new THREE.Group();
 shipPitchGroup.add(shipMeshGroup);
 
-const bayDoors = [];
-const irisPaddles = [];
-const sealPaddles = [];
-const nozzlePistonLinks = [];
-const radiatorPanels = [];
-const hydraulicPistons = [];
-const wingPivots = [];
-const controlSurfaces = [];
-const sabotClamps = [];
-const fairingPanels = [];
-const strobeLeds = [];
-const rcsJets = [];
-const laserBeams = [];
-
-const innerSkeletonGroup = new THREE.Group();
-shipMeshGroup.add(innerSkeletonGroup);
-
-const spineCore = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 28.0), matTitaniumFrame);
-spineCore.castShadow = true;
-innerSkeletonGroup.add(spineCore);
-
-const mliCore = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 26.0, 16), matGoldMLI);
-mliCore.rotation.x = Math.PI / 2;
-innerSkeletonGroup.add(mliCore);
-
+// 改良点④: スクラムジェット補助ブースター×2基の完全3Dモデル
+const boosterAssemblies = [];
 for (let s of [-1, 1]) {
-    const pipePts = [
-        new THREE.Vector3(s * 1.5, -0.4, 12.0),
-        new THREE.Vector3(s * 2.2, -0.2, 4.0),
-        new THREE.Vector3(s * 2.8, -0.3, -4.0),
-        new THREE.Vector3(s * 1.9, 0.2, -12.0),
-        new THREE.Vector3(s * 0.9, 0.0, -15.0)
-    ];
-    const pipeCurve = new THREE.CatmullRomCurve3(pipePts);
-    const pipeGeo = new THREE.TubeGeometry(pipeCurve, 32, 0.16, 10, false);
-    const pipeMesh = new THREE.Mesh(pipeGeo, matCryoPipe);
-    pipeMesh.castShadow = true;
-    innerSkeletonGroup.add(pipeMesh);
+    const boosterGrp = new THREE.Group();
+    boosterGrp.position.set(s * 4.6, -0.6, -2.0);
 
-    for (let fIdx = 0; fIdx < 4; fIdx++) {
-        const fZ = -10.0 + fIdx * 6.0;
-        const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.08, 12), matGoldMLI);
-        flange.rotation.x = Math.PI / 2;
-        flange.position.set(s * 2.2, -0.25, fZ);
-        innerSkeletonGroup.add(flange);
-    }
+    const bPod = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.85, 14.0, 16), matDarkAlloy);
+    bPod.rotation.x = Math.PI / 2;
+    bPod.castShadow = true;
+    boosterGrp.add(bPod);
+
+    const bNose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 3.2, 16), matHull);
+    bNose.rotation.x = Math.PI / 2;
+    bNose.position.z = 8.6;
+    boosterGrp.add(bNose);
+
+    const bNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 1.2, 16), matTitaniumFrame);
+    bNozzle.rotation.x = Math.PI / 2;
+    bNozzle.position.z = -7.6;
+    boosterGrp.add(bNozzle);
+
+    shipMeshGroup.add(boosterGrp);
+    boosterAssemblies.push({ group: boosterGrp, side: s, baseX: s * 4.6 });
 }
 
-for (let bz = -12.0; bz <= 10.0; bz += 2.5) {
-    const bulkhead = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.08, 6, 16), matTitaniumFrame);
-    bulkhead.position.set(0, 0.1, bz);
-    innerSkeletonGroup.add(bulkhead);
-}
-
-const cockpitGroup = new THREE.Group();
-cockpitGroup.position.set(0, 0.7, 7.5);
-shipMeshGroup.add(cockpitGroup);
-
-for (let s of [-0.4, 0.4]) {
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 0.6), matDarkAlloy);
-    seat.position.set(s, 0, 0);
-    cockpitGroup.add(seat);
-    const pilotHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), matDarkAlloy);
-    pilotHead.position.set(s, 0.55, 0.05);
-    cockpitGroup.add(pilotHead);
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.1), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-    visor.position.set(s, 0.57, 0.18);
-    cockpitGroup.add(visor);
-}
-
-const consoleHolo = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.2, 0.35),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
-);
-consoleHolo.rotation.x = -0.5;
-consoleHolo.position.set(0, 0.25, 1.2);
-cockpitGroup.add(consoleHolo);
-
-function createLoftedChassisGeometry() {
-    const sections = [
-        { z: 18.0, w: 0.1, hTop: 0.1, hBtm: 0.1, yOff: 0.0 },
-        { z: 14.0, w: 1.8, hTop: 0.7, hBtm: 0.4, yOff: 0.1 },
-        { z: 9.0,  w: 3.8, hTop: 1.3, hBtm: 0.8, yOff: 0.25 },
-        { z: 4.0,  w: 4.8, hTop: 1.5, hBtm: 1.0, yOff: 0.2 },
-        { z: -2.0, w: 5.4, hTop: 1.6, hBtm: 1.1, yOff: 0.1 },
-        { z: -8.0, w: 5.2, hTop: 1.5, hBtm: 1.2, yOff: 0.0 },
-        { z: -14.0,w: 4.2, hTop: 1.3, hBtm: 1.2, yOff: -0.1 }
-    ];
-    const radialSegs = 24;
-    const zSegs = sections.length;
-    const geo = new THREE.BufferGeometry();
-    const pos = [];
-    const uvs = [];
-    const indices = [];
-
-    for (let j = 0; j < zSegs; j++) {
-        const sec = sections[j];
-        for (let i = 0; i <= radialSegs; i++) {
-            const theta = (i / radialSegs) * Math.PI * 2;
-            const cosT = Math.cos(theta);
-            const sinT = Math.sin(theta);
-            const h = sinT >= 0 ? sec.hTop : sec.hBtm;
-            const x = cosT * (sec.w * 0.5);
-            const y = sec.yOff + sinT * h;
-            const z = sec.z;
-            pos.push(x, y, z);
-            uvs.push(i / radialSegs, j / (zSegs - 1));
-        }
-    }
-
-    for (let j = 0; j < zSegs - 1; j++) {
-        for (let i = 0; i < radialSegs; i++) {
-            const a = j * (radialSegs + 1) + i;
-            const b = (j + 1) * (radialSegs + 1) + i;
-            const c = (j + 1) * (radialSegs + 1) + (i + 1);
-            const d = j * (radialSegs + 1) + (i + 1);
-            indices.push(a, b, d);
-            indices.push(b, c, d);
-        }
-    }
-
-    geo.setIndex(indices);
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geo.computeVertexNormals();
-    return geo;
-}
-
-if (cfg.style === "stealth_waverider") {
-    const loftChassisGeo = createLoftedChassisGeometry();
-    const chassisMesh = new THREE.Mesh(loftChassisGeo, matHull);
-    chassisMesh.castShadow = true; chassisMesh.receiveShadow = true;
-    shipMeshGroup.add(chassisMesh);
-
-    const bellyLoftMesh = new THREE.Mesh(loftChassisGeo, matBellyTile);
-    bellyLoftMesh.scale.set(0.985, 0.98, 0.995);
-    bellyLoftMesh.position.set(0, -0.06, 0);
-    bellyLoftMesh.castShadow = true; bellyLoftMesh.receiveShadow = true;
-    shipMeshGroup.add(bellyLoftMesh);
-
-    for (let s of [-1, 1]) {
-        const intakeDuct = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 8.5), matDarkAlloy);
-        intakeDuct.position.set(s * 2.8, -0.4, 0.0);
-        intakeDuct.castShadow = true;
-        shipMeshGroup.add(intakeDuct);
-
-        const intakeOpening = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), new THREE.MeshBasicMaterial({ color: 0x050b14, side: THREE.DoubleSide }));
-        intakeOpening.position.set(s * 2.8, -0.4, 4.3);
-        shipMeshGroup.add(intakeOpening);
-
-        const vTail = new THREE.Mesh(new THREE.BoxGeometry(0.22, 4.8, 6.5), matHull);
-        vTail.position.set(s * 3.8, 2.2, -10.8);
-        vTail.rotation.z = -s * 0.32;
-        vTail.castShadow = true;
-        shipMeshGroup.add(vTail);
-
-        const ruffler = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.8, 1.4), matDarkAlloy);
-        ruffler.position.set(s * 4.4, 2.2, -13.5);
-        ruffler.rotation.z = -s * 0.32;
-        shipMeshGroup.add(ruffler);
-        controlSurfaces.push({ mesh: ruffler, side: s, type: 'rudder' });
-
-        const strobe = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-        strobe.position.set(s * 4.6, 4.2, -11.5);
-        shipMeshGroup.add(strobe);
-        strobeLeds.push(strobe);
-    }
-} else if (cfg.style === "magnetic_fusion") {
-    const cmdPod = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 3.4, 13.0, 8), matHull);
-    cmdPod.rotation.x = Math.PI / 2;
-    cmdPod.scale.set(1.3, 0.75, 1.0);
-    cmdPod.position.set(0, 0.2, 10.5);
-    cmdPod.castShadow = true;
-    shipMeshGroup.add(cmdPod);
-
-    for (let z = -12; z <= 3; z += 3.0) {
-        const ringFrame = new THREE.Mesh(new THREE.TorusGeometry(3.8, 0.18, 8, 8), matTitaniumFrame);
-        ringFrame.position.set(0, 0, z);
-        shipMeshGroup.add(ringFrame);
-    }
-    for (let z of [-8.5, -3.5]) {
-        for (let a = 0; a < 4; a++) {
-            const ang = (a / 4) * Math.PI * 2 + Math.PI / 4;
-            const sphereTank = new THREE.Mesh(new THREE.SphereGeometry(1.65, 24, 24), matGoldMLI);
-            sphereTank.position.set(Math.cos(ang) * 3.2, Math.sin(ang) * 2.4, z);
-            sphereTank.castShadow = true;
-            shipMeshGroup.add(sphereTank);
-        }
-    }
-} else {
-    const innerCore = new THREE.Mesh(new THREE.ConeGeometry(2.1, 34.0, 6), matGoldMLI);
-    innerCore.rotation.x = Math.PI / 2;
-    innerCore.position.set(0, 0, 2.0);
-    shipMeshGroup.add(innerCore);
-
-    for (let i = 0; i < 4; i++) {
-        const ang = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const fPanel = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.35, 24.0), matHull);
-        fPanel.position.set(Math.cos(ang) * 2.1, Math.sin(ang) * 2.1, 1.0);
-        fPanel.rotation.z = ang + Math.PI / 2;
-        fPanel.castShadow = true;
-        shipMeshGroup.add(fPanel);
-        fairingPanels.push({ mesh: fPanel, baseX: fPanel.position.x, baseY: fPanel.position.y, ang: ang });
-    }
-}
-
-const canopyGlass = new THREE.Mesh(new THREE.ConeGeometry(1.35, 7.5, 16), matCanopy);
-canopyGlass.scale.set(1.0, 0.48, 1.6);
-canopyGlass.rotation.x = Math.PI / 2;
-canopyGlass.position.set(0, 0.95, 8.8);
-canopyGlass.castShadow = true;
-shipMeshGroup.add(canopyGlass);
-
-const halfSpan = cfg.wings_span * 0.5;
-const wingtipVortices = [];
-
-for (let s of [-1, 1]) {
-    const pivot = new THREE.Group();
-    pivot.position.set(s * 3.2, -0.1, 1.5);
-    shipMeshGroup.add(pivot);
-
-    const wShape = new THREE.Shape();
-    wShape.moveTo(0, 4.0);
-    wShape.lineTo(s * (halfSpan - 3.2), -3.5);
-    wShape.lineTo(s * (halfSpan - 3.6), -7.5);
-    wShape.lineTo(0, -10.5);
-    wShape.closePath();
-
-    const wGeo = new THREE.ExtrudeGeometry(wShape, { depth: 0.32, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.4, bevelSegments: 2 });
-    const wMesh = new THREE.Mesh(wGeo, matHull);
-    wMesh.rotation.x = Math.PI / 2;
-    wMesh.castShadow = true; wMesh.receiveShadow = true;
-    pivot.add(wMesh);
-
-    const elevonGeo = new THREE.BoxGeometry(halfSpan * 0.45, 0.18, 1.6);
-    const elevonMesh = new THREE.Mesh(elevonGeo, matDarkAlloy);
-    elevonMesh.position.set(s * (halfSpan * 0.55), 0, -8.6);
-    pivot.add(elevonMesh);
-    controlSurfaces.push({ mesh: elevonMesh, side: s, type: 'elevon' });
-
-    for (let f = 1; f <= 3; f++) {
-        const fairingPod = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.02, 2.2, 8), matTitaniumFrame);
-        fairingPod.rotation.x = Math.PI / 2;
-        fairingPod.position.set(s * (2.0 + f * (halfSpan - 4.5) / 3.0), -0.22, -6.5);
-        pivot.add(fairingPod);
-    }
-
-    const tipLed = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), new THREE.MeshBasicMaterial({ color: s > 0 ? 0x10b981 : 0xef4444 }));
-    tipLed.position.set(s * (halfSpan - 3.4), 0, -5.5);
-    pivot.add(tipLed);
-    strobeLeds.push(tipLed);
-
-    const vortexGeo = new THREE.CylinderGeometry(0.08, 0.85, 45.0, 8, 1, true);
-    const vortexMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false });
-    const vortexMesh = new THREE.Mesh(vortexGeo, vortexMat);
-    vortexMesh.rotation.x = Math.PI / 2;
-    vortexMesh.position.set(s * (halfSpan - 3.4), 0, -28.0);
-    pivot.add(vortexMesh);
-    wingtipVortices.push({ mesh: vortexMesh, mat: vortexMat });
-
-    wingPivots.push({ group: pivot, side: s });
-}
-
-for (let s of [-1, 1]) {
-    for (let zOff of [-6.0, 1.0]) {
-        const doorPivot = new THREE.Group();
-        doorPivot.position.set(s * 2.4, 1.15, zOff);
-        shipMeshGroup.add(doorPivot);
-
-        const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.25, 6.4), matHull);
-        doorPanel.position.set(-s * 1.1, 0, 0);
-        doorPanel.castShadow = true;
-        doorPivot.add(doorPanel);
-        bayDoors.push({ pivot: doorPivot, side: s });
-
-        const innerDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 6.0), matDarkAlloy);
-        innerDoorFrame.position.set(-s * 1.1, -0.1, 0);
-        doorPivot.add(innerDoorFrame);
-
-        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.4, 8), matTitaniumFrame);
-        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.2, 8), matPistonRod);
-        cyl.position.set(s * 1.2, 0.7, zOff);
-        cyl.rotation.z = s * 0.5;
-        rod.position.set(0, 0.6, 0);
-        cyl.add(rod);
-        shipMeshGroup.add(cyl);
-        hydraulicPistons.push({ cyl, rod, side: s });
-    }
-}
-
-for (let s of [-1, 1]) {
-    for (let z of [10.0, -10.0]) {
-        const rcsBlock = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.6), matTitaniumFrame);
-        rcsBlock.position.set(s * 2.6, 0.2, z);
-        shipMeshGroup.add(rcsBlock);
-
-        const rcsMat = new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.0, depthWrite: false });
-        const rcsCone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 2.8, 8, 1, true), rcsMat);
-        rcsCone.rotation.z = s * (Math.PI / 2);
-        rcsCone.position.set(s * 3.1, 0.2, z);
-        shipMeshGroup.add(rcsCone);
-        rcsJets.push({ cone: rcsCone, mat: rcsMat });
-    }
-}
-
-const warpRingAssembly = new THREE.Group();
-warpRingAssembly.position.set(0, -0.8, -2.5);
-shipMeshGroup.add(warpRingAssembly);
-
-const ringPylon = new THREE.Mesh(new THREE.BoxGeometry(1.6, 3.8, 4.5), matTitaniumFrame);
-ringPylon.position.set(0, -1.8, 0);
-warpRingAssembly.add(ringPylon);
-
-const rotorClockwise = new THREE.Group();
-const rotorCounter = new THREE.Group();
-warpRingAssembly.add(rotorClockwise);
-warpRingAssembly.add(rotorCounter);
-
-const segmentCount = 16;
-const ringSegments = [];
-for (let i = 0; i < segmentCount; i++) {
-    const ang = (i / segmentCount) * Math.PI * 2;
-    const segPivot = new THREE.Group();
-    segPivot.rotation.z = ang;
-    rotorClockwise.add(segPivot);
-
-    const block = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.45, 1.8), matDarkAlloy);
-    block.position.set(0, 6.2, 0);
-    block.castShadow = true;
-    segPivot.add(block);
-
-    const coilCore = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.35, 1.4), new THREE.MeshBasicMaterial({ color: cfg.aurora_hex }));
-    coilCore.position.set(0, 6.2, 0);
-    segPivot.add(coilCore);
-
-    ringSegments.push({ block, coilCore, baseR: 6.2 });
-}
-
-const counterTorus = new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.18, 12, 48), matCopperCoil);
-rotorCounter.add(counterTorus);
-
-const rippleGeos = [];
-for (let rp = 0; rp < 3; rp++) {
-    const rip = new THREE.Mesh(
-        new THREE.RingGeometry(4.5, 7.8, 32),
-        new THREE.MeshBasicMaterial({ color: cfg.spark_hex, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
-    );
-    rip.position.z = -rp * 3.5;
-    warpRingAssembly.add(rip);
-    rippleGeos.push(rip);
-}
-
-const gravLensMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vViewPos;
-        void main() {
-            vNormal = normalize(normalMatrix * normal);
-            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-            vViewPos = -mvPos.xyz;
-            gl_Position = projectionMatrix * mvPos;
-        }
-    `,
-    fragmentShader: `
-        varying vec3 vNormal;
-        varying vec3 vViewPos;
-        uniform float uAlpha;
-        void main() {
-            vec3 v = normalize(vViewPos);
-            float fres = pow(1.0 - abs(dot(vNormal, v)), 3.5);
-            vec3 col = mix(vec3(0.01, 0.05, 0.15), vec3(0.22, 0.75, 0.98), fres);
-            gl_FragColor = vec4(col, fres * uAlpha * 0.95);
-        }
-    `,
-    uniforms: { uAlpha: { value: 0.0 } },
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-    depthWrite: false
-});
-const gravLensSphere = new THREE.Mesh(new THREE.SphereGeometry(5.2, 32, 32), gravLensMat);
-warpRingAssembly.add(gravLensSphere);
-
-const accretionRing = new THREE.Mesh(
-    new THREE.RingGeometry(5.4, 9.8, 48),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending })
-);
-warpRingAssembly.add(accretionRing);
-
-for (let r = 0; r < cfg.radiator_fins; r++) {
-    const s = (r % 2 === 0) ? 1 : -1;
-    const row = Math.floor(r / 2);
-    const rPivot = new THREE.Group();
-    rPivot.position.set(s * 2.2, 0.8, -3.5 - row * 2.8);
-    shipMeshGroup.add(rPivot);
-
-    const rBlade = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.08, 1.8), matRadiator);
-    rBlade.position.set(s * 2.4, 0, 0);
-    rBlade.castShadow = true;
-    rPivot.add(rBlade);
-    radiatorPanels.push({ pivot: rPivot, side: s });
-}
-
-// エンジン＆推力偏向ジンバル
-const nozzleGimbalRoot = new THREE.Group();
-nozzleGimbalRoot.position.set(0, 0, -14.2);
-shipMeshGroup.add(nozzleGimbalRoot);
-
-const combustionThroat = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.8, 2.1, 1.8, 24, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
-);
-combustionThroat.rotation.x = Math.PI / 2;
-combustionThroat.position.z = 1.0;
-nozzleGimbalRoot.add(combustionThroat);
-
-const heatShroud = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.8, 2.4, 32, 1, true), matHeatStain);
-heatShroud.rotation.x = Math.PI / 2;
-heatShroud.position.z = -0.6;
-nozzleGimbalRoot.add(heatShroud);
-
-for (let inj = 1; inj <= 3; inj++) {
-    const injRing = new THREE.Mesh(
-        new THREE.TorusGeometry(inj * 0.65, 0.06, 8, 32),
-        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.95, roughness: 0.1, emissive: cfg.flame_hex, emissiveIntensity: 0.5 })
-    );
-    injRing.position.z = 0.6;
-    nozzleGimbalRoot.add(injRing);
-}
-
-for (let i = 0; i < 12; i++) {
-    const ang = (i / 12) * Math.PI * 2;
-    const petalPivot = new THREE.Group();
-    petalPivot.position.set(Math.cos(ang) * 2.5, Math.sin(ang) * 2.5, -1.0);
-    petalPivot.rotation.z = ang;
-    nozzleGimbalRoot.add(petalPivot);
-
-    const outerPetal = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 3.2), matTitaniumFrame);
-    outerPetal.position.set(0, 0.08, -1.4);
-    outerPetal.castShadow = true;
-    petalPivot.add(outerPetal);
-    irisPaddles.push(petalPivot);
-
-    const sealPivot = new THREE.Group();
-    const sealAng = ang + Math.PI / 12;
-    sealPivot.position.set(Math.cos(sealAng) * 2.35, Math.sin(sealAng) * 2.35, -1.0);
-    sealPivot.rotation.z = sealAng;
-    nozzleGimbalRoot.add(sealPivot);
-
-    const innerSeal = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.08, 3.0), matDarkAlloy);
-    innerSeal.position.set(0, 0.04, -1.3);
-    sealPivot.add(innerSeal);
-    sealPaddles.push(sealPivot);
-
-    const linkCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6), matDarkAlloy);
-    linkCyl.position.set(Math.cos(ang) * 2.8, Math.sin(ang) * 2.8, -0.6);
-    linkCyl.rotation.x = Math.PI / 2;
-    nozzleGimbalRoot.add(linkCyl);
-    nozzlePistonLinks.push(linkCyl);
-}
-
-for (let s of [-1, 1]) {
-    const sabot = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.1, 7.5), matDarkAlloy);
-    sabot.position.set(s * 3.8, -1.4, -1.0);
-    sabot.castShadow = true;
-    shipMeshGroup.add(sabot);
-    sabotClamps.push({ mesh: sabot, baseX: s * 3.8, side: s });
-}
-
-const sonicBoomDiscMat = new THREE.MeshBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
-});
-const sonicBoomDisc = new THREE.Mesh(new THREE.RingGeometry(0.5, 14.0, 32), sonicBoomDiscMat);
-sonicBoomDisc.position.set(0, 0, 0);
-shipMeshGroup.add(sonicBoomDisc);
-
-const vaporShaderMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec2 vUv;
-        void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform float uAlpha;
-        uniform float uTime;
-        varying vec2 vUv;
-        void main() {
-            float noise = sin(vUv.x * 25.0 + uTime * 35.0) * cos(vUv.y * 30.0 - uTime * 20.0);
-            float rim = pow(vUv.y, 2.0);
-            float tear = smoothstep(0.15, 0.85, vUv.y + noise * 0.18);
-            gl_FragColor = vec4(1.0, 1.0, 1.0, uAlpha * rim * tear * 0.75);
-        }
-    `,
-    uniforms: { uAlpha: { value: 0.0 }, uTime: { value: 0.0 } },
-    transparent: true, depthWrite: false, side: THREE.DoubleSide
-});
-const vaporCone1 = new THREE.Mesh(new THREE.ConeGeometry(8.5, 4.2, 32, 1, true), vaporShaderMat);
-vaporCone1.rotation.x = -Math.PI / 2;
-vaporCone1.position.set(0, 0, 1.0);
-shipMeshGroup.add(vaporCone1);
-
-const vaporCone2 = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.8, 32, 1, true), vaporShaderMat);
-vaporCone2.rotation.x = -Math.PI / 2;
-vaporCone2.position.set(0, 0.4, 7.5);
-shipMeshGroup.add(vaporCone2);
-
-const plasmaBowMat = new THREE.MeshBasicMaterial({ color: cfg.plasma_hex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false });
-const plasmaBow = new THREE.Mesh(new THREE.SphereGeometry(4.8, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.5), plasmaBowMat);
-plasmaBow.rotation.x = -Math.PI / 2;
-plasmaBow.position.set(0, 0, 15.0);
-shipMeshGroup.add(plasmaBow);
-
-const leadingEdgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending });
-for (let s of [-1, 1]) {
-    const edgePts = [new THREE.Vector3(s * 0.2, 0.2, 16.0), new THREE.Vector3(s * 3.5, 0.0, 3.0), new THREE.Vector3(s * halfSpan, 0.0, -4.5)];
-    const edgeCurve = new THREE.CatmullRomCurve3(edgePts);
-    const edgeMesh = new THREE.Mesh(new THREE.TubeGeometry(edgeCurve, 20, 0.08, 6, false), leadingEdgeMat);
-    shipMeshGroup.add(edgeMesh);
-}
-
-const sparkCount = 280;
-const sparkGeo = new THREE.BufferGeometry();
-const sparkPos = new Float32Array(sparkCount * 6);
-for (let i = 0; i < sparkCount; i++) {
-    const rx = (Math.random() - 0.5) * 6.0, ry = (Math.random() - 0.5) * 2.5, rz = Math.random() * 20.0;
-    sparkPos[i * 6] = rx; sparkPos[i * 6 + 1] = ry; sparkPos[i * 6 + 2] = rz;
-    sparkPos[i * 6 + 3] = rx; sparkPos[i * 6 + 4] = ry; sparkPos[i * 6 + 5] = rz - 6.0;
-}
-sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-const sparkMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending });
-const sparkLines = new THREE.LineSegments(sparkGeo, sparkMat);
-shipMeshGroup.add(sparkLines);
-
-const plumeRoot = new THREE.Group();
-plumeRoot.position.set(0, 0, -2.3);
-nozzleGimbalRoot.add(plumeRoot);
-
-const plumeLight = new THREE.PointLight(cfg.flame_hex, 0.0, 160.0);
-plumeLight.position.set(0, 0, -2.0);
-plumeRoot.add(plumeLight);
-
-const flareTexMat = new THREE.MeshBasicMaterial({
-    color: cfg.flame_hex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false
-});
-const anamorphicFlare = new THREE.Mesh(new THREE.PlaneGeometry(55.0, 1.2), flareTexMat);
-anamorphicFlare.position.set(0, 0, -2.5);
-plumeRoot.add(anamorphicFlare);
-
-const flameShaderMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec2 vUv;
-        varying vec3 vNormal;
-        void main() {
-            vUv = uv;
-            vNormal = normalize(normalMatrix * normal);
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        varying vec2 vUv;
-        varying vec3 vNormal;
-        uniform float uTime;
-        uniform vec3 uColor;
-        void main() {
-            float noise = sin(vUv.y * 35.0 - uTime * 28.0) * cos(vUv.x * 20.0 + uTime * 15.0);
-            float core = pow(1.0 - abs(vUv.x - 0.5) * 2.0, 3.0);
-            float taper = pow(1.0 - vUv.y, 1.5);
-            vec3 col = mix(uColor, vec3(1.0, 1.0, 1.0), core * 0.85);
-            float alpha = (core + noise * 0.25) * taper * 0.88;
-            gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
-        }
-    `,
-    uniforms: {
-        uTime: { value: 0.0 },
-        uColor: { value: new THREE.Color(cfg.flame_hex) }
-    },
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-    depthWrite: false
+// 改良点③: 展開式油圧ランディングギア（前脚＋主脚×2）
+const landingGears = [];
+const gearPositions = [{ x: 0, y: -0.4, z: 9.0 }, { x: -3.5, y: -0.6, z: -6.0 }, { x: 3.5, y: -0.6, z: -6.0 }];
+gearPositions.forEach((gp) => {
+    const gPivot = new THREE.Group();
+    gPivot.position.set(gp.x, gp.y, gp.z);
+
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.6, 8), matTitaniumFrame);
+    strut.position.y = -1.3;
+    gPivot.add(strut);
+
+    const footPad = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.2, 12), matDarkAlloy);
+    footPad.position.y = -2.6;
+    gPivot.add(footPad);
+
+    gPivot.scale.set(0.001, 0.001, 0.001);
+    shipMeshGroup.add(gPivot);
+    landingGears.push(gPivot);
 });
 
-const jetCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 4.8, 44.0, 32, 1, true), flameShaderMat);
-jetCylinder.rotation.x = Math.PI / 2;
-jetCylinder.position.z = -22.0;
-plumeRoot.add(jetCylinder);
-
-const shockBarrels = [];
-for (let d = 0; d < cfg.shock_count; d++) {
-    const barrel = new THREE.Mesh(
-        new THREE.SphereGeometry(1.6 - d * 0.18, 16, 16),
-        new THREE.MeshBasicMaterial({ color: cfg.spark_hex, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending })
-    );
-    barrel.scale.set(1.0, 1.0, 2.2);
-    barrel.position.set(0, 0, -3.5 - d * 5.4);
-    plumeRoot.add(barrel);
-    shockBarrels.push(barrel);
-}
-
-const pulseRings = [];
-for (let pr = 0; pr < 6; pr++) {
-    const pRing = new THREE.Mesh(
-        new THREE.TorusGeometry(1.8, 0.22, 8, 24),
-        new THREE.MeshBasicMaterial({ color: cfg.flame_hex, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending })
-    );
-    plumeRoot.add(pRing);
-    pulseRings.push(pRing);
-}
-
-for (let s of [-1, 1]) {
-    const lBeamMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, linewidth: 2 });
-    const lGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(s * 1.8, 0, 10.0), new THREE.Vector3(s * 4.0, 0, 90.0)]);
-    const lLine = new THREE.Line(lGeo, lBeamMat);
-    shipMeshGroup.add(lLine);
-    laserBeams.push(lLine);
-}
-
-const debrisTargetGroup = new THREE.Group();
-debrisTargetGroup.position.set(0, 0, 95.0);
-debrisTargetGroup.visible = false;
-shipMeshGroup.add(debrisTargetGroup);
-
-const targetBoxMesh = new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.BoxGeometry(4.2, 4.2, 0.1)),
-    new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 2 })
-);
-debrisTargetGroup.add(targetBoxMesh);
-
-function makeHoloHudTexture() {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 256;
-    const ctx = c.getContext('2d');
-    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 4;
-    ctx.strokeRect(10, 10, 492, 236);
-    ctx.fillStyle = 'rgba(14,165,233,0.18)';
-    ctx.fillRect(10, 10, 492, 236);
-    ctx.font = 'bold 28px monospace';
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillText('TARGET VECTOR LOCKED', 40, 60);
-    ctx.font = 'bold 22px monospace';
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText('ALCUBIERRE RING: ARMED', 40, 110);
-    ctx.fillText('FIELD: 9.85 TeV / FLUX NOMINAL', 40, 155);
-    ctx.fillText('G-LOAD STABILIZER: 100%', 40, 200);
-    return new THREE.CanvasTexture(c);
-}
-const holoHudMat = new THREE.SpriteMaterial({ map: makeHoloHudTexture(), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending });
-const holoHudSprite = new THREE.Sprite(holoHudMat);
-holoHudSprite.scale.set(8.5, 4.25, 1.0);
-holoHudSprite.position.set(0, 3.8, 8.0);
-shipMeshGroup.add(holoHudSprite);
-
-// 常時稼働スペースダスト
-const dustCount = 650;
-const dustGeo = new THREE.BufferGeometry();
-const dustPos = new Float32Array(dustCount * 6);
-for (let i = 0; i < dustCount; i++) {
-    const rx = (Math.random() - 0.5) * 45.0;
-    const ry = (Math.random() - 0.5) * 30.0;
-    const rz = (Math.random() - 0.5) * 220.0;
-    dustPos[i * 6] = rx; dustPos[i * 6 + 1] = ry; dustPos[i * 6 + 2] = rz;
-    dustPos[i * 6 + 3] = rx; dustPos[i * 6 + 4] = ry; dustPos[i * 6 + 5] = rz - 2.5;
-}
-dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-const dustMat = new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending });
-const ambientSpaceDust = new THREE.LineSegments(dustGeo, dustMat);
-scene.add(ambientSpaceDust);
-
-// 連続通過する3Dホログラム空間誘導ゲート
-const waypointRingCount = 12;
-const waypointRings = [];
-for (let wr = 0; wr < waypointRingCount; wr++) {
-    const ringShape = new THREE.RingGeometry(18.0, 19.5, 8);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
-    const ringMesh = new THREE.Mesh(ringShape, ringMat);
-    ringMesh.position.set(0, 0, wr * 75.0);
-    scene.add(ringMesh);
-    waypointRings.push(ringMesh);
-}
-
-// ワープ時空曲率ワイヤーフレーム・グリッド
-const warpGridMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec2 vUv;
-        varying vec3 vPos;
-        void main() {
-            vUv = uv;
-            vPos = position;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        varying vec2 vUv;
-        varying vec3 vPos;
-        uniform float uTime;
-        uniform float uAlpha;
-        void main() {
-            vec2 g = abs(fract(vUv * 35.0 - vec2(0.0, uTime * 4.0)) - 0.5);
-            float line = 1.0 - smoothstep(0.01, 0.08, min(g.x, g.y));
-            float distFade = smoothstep(120.0, 10.0, abs(vPos.z));
-            gl_FragColor = vec4(0.22, 0.74, 0.98, line * distFade * uAlpha);
-        }
-    `,
-    uniforms: { uTime: { value: 0.0 }, uAlpha: { value: 0.0 } },
-    transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
-});
-const warpCurvatureGrid = new THREE.Mesh(new THREE.PlaneGeometry(90.0, 240.0, 32, 32), warpGridMat);
-warpCurvatureGrid.rotation.x = Math.PI / 2;
-warpCurvatureGrid.position.set(0, -6.5, 0);
-scene.add(warpCurvatureGrid);
-
-// =========================================================================
-// 5. カタパルト＆誘導灯＆波浪海面
-// =========================================================================
-const catapultSlopeRoot = new THREE.Group();
-catapultSlopeRoot.rotation.x = -radAngle;
-scene.add(catapultSlopeRoot);
-
-const railMover = new THREE.Group();
-catapultSlopeRoot.add(railMover);
-
-const arcLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]);
-const arcLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, linewidth: 2 });
-const arcLine = new THREE.Line(arcLineGeo, arcLineMat);
-catapultSlopeRoot.add(arcLine);
-
-const arcLight = new THREE.PointLight(0x38bdf8, 0.0, 80.0);
-catapultSlopeRoot.add(arcLight);
-
-const dummy = new THREE.Object3D();
-const segCount = 220;
-const archInst = new THREE.InstancedMesh(new THREE.TorusGeometry(9.5, 0.45, 10, 24, Math.PI), matTitaniumFrame, segCount);
-archInst.castShadow = true;
-for (let i = 0; i < segCount; i++) {
-    dummy.position.set(0, -1.8, i * 16.0 - 40.0);
-    dummy.updateMatrix();
-    archInst.setMatrixAt(i, dummy.matrix);
-}
-railMover.add(archInst);
-
-const seqLedInst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }), 220 * 2);
-for (let i = 0; i < 220; i++) {
-    dummy.position.set(-6.5, -1.2, i * 16.0 - 40.0);
-    dummy.updateMatrix();
-    seqLedInst.setMatrixAt(i * 2, dummy.matrix);
-    dummy.position.set(6.5, -1.2, i * 16.0 - 40.0);
-    dummy.updateMatrix();
-    seqLedInst.setMatrixAt(i * 2 + 1, dummy.matrix);
-}
-railMover.add(seqLedInst);
-
-const mainGirder = new THREE.Mesh(new THREE.BoxGeometry(14.5, 2.4, 3600), matDarkAlloy);
-mainGirder.position.set(0, -3.2, 1750);
-mainGirder.receiveShadow = true;
-railMover.add(mainGirder);
-
-const groundEnvMover = new THREE.Group();
-scene.add(groundEnvMover);
-
-const oceanShaderMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec2 vUv;
-        varying vec3 vWorldPos;
-        varying vec3 vNormal;
-        uniform float uTime;
-
-        vec3 gerstnerWaveXZ(vec4 wave, vec3 p, inout vec3 tangent, inout vec3 binormal) {
-            float steepness = wave.z;
-            float wavelength = wave.w;
-            float k = 2.0 * 3.14159 / wavelength;
-            float c = sqrt(9.8 / k);
-            vec2 d = normalize(wave.xy);
-            float f = k * (dot(d, p.xz) - c * uTime * 0.45);
-            float a = steepness / k;
-
-            tangent += vec3(-d.x * d.x * (steepness * sin(f)), d.x * (steepness * cos(f)), -d.x * d.y * (steepness * sin(f)));
-            binormal += vec3(-d.x * d.y * (steepness * sin(f)), d.y * (steepness * cos(f)), -d.y * d.y * (steepness * sin(f)));
-            return vec3(d.x * (a * cos(f)), a * sin(f), d.y * (a * cos(f)));
-        }
-
-        void main() {
-            vUv = uv * 350.0;
-            vec3 p = position;
-            vec3 tangent = vec3(1.0, 0.0, 0.0);
-            vec3 binormal = vec3(0.0, 0.0, 1.0);
-
-            p += gerstnerWaveXZ(vec4(1.0, 0.3, 0.22, 90.0), position, tangent, binormal);
-            p += gerstnerWaveXZ(vec4(0.4, 0.9, 0.14, 45.0), position, tangent, binormal);
-            p += gerstnerWaveXZ(vec4(-0.6, 0.7, 0.09, 22.0), position, tangent, binormal);
-
-            vNormal = normalize(cross(binormal, tangent));
-            vec4 worldP = modelMatrix * vec4(p, 1.0);
-            vWorldPos = worldP.xyz;
-            gl_Position = projectionMatrix * viewMatrix * worldP;
-        }
-    `,
-    fragmentShader: `
-        varying vec2 vUv;
-        varying vec3 vWorldPos;
-        varying vec3 vNormal;
-        uniform vec3 uSunDir;
-        uniform vec3 uSunColor;
-        uniform float uTime;
-
-        void main() {
-            vec3 viewDir = normalize(cameraPosition - vWorldPos);
-            float micro = sin(vUv.x * 2.5 + uTime * 2.0) * cos(vUv.y * 2.5 - uTime * 1.5) * 0.08;
-            vec3 n = normalize(vNormal + vec3(micro, 0.0, micro));
-
-            float fresnel = pow(1.0 - max(0.0, dot(n, viewDir)), 4.0);
-            vec3 deepWater = vec3(0.015, 0.045, 0.095);
-            vec3 skyReflect = vec3(0.35, 0.65, 0.98);
-
-            vec3 halfVec = normalize(uSunDir + viewDir);
-            float spec = pow(max(0.0, dot(n, halfVec)), 160.0) * 4.5;
-            vec3 col = mix(deepWater, skyReflect, fresnel) + uSunColor * spec;
-            gl_FragColor = vec4(col, 0.96);
-        }
-    `,
-    uniforms: {
-        uTime: { value: 0.0 },
-        uSunDir: { value: new THREE.Vector3().fromArray(cfg.env.sun_pos).normalize() },
-        uSunColor: { value: new THREE.Color(cfg.env.sun_color) }
-    },
-    transparent: true
-});
-
-const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(160000, 160000, 96, 96), oceanShaderMat);
-seaMesh.rotation.x = -Math.PI / 2;
-seaMesh.position.y = -45.0;
-seaMesh.receiveShadow = true;
-groundEnvMover.add(seaMesh);
-
-const islandBase = new THREE.Mesh(new THREE.BoxGeometry(220, 28, 3800), matConcreteWet);
-islandBase.position.set(0, -32, 1750);
-islandBase.receiveShadow = true;
-groundEnvMover.add(islandBase);
-
-const craneGeo = new THREE.BoxGeometry(4.0, 95.0, 4.0);
-const craneMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.85, roughness: 0.25 });
-for (let cr = 0; cr < 8; cr++) {
-    const s = (cr % 2 === 0) ? 1 : -1;
-    const cz = cr * 380.0 + 100.0;
-    const cTower = new THREE.Mesh(craneGeo, craneMat);
-    cTower.position.set(s * 75.0, 25.0, cz);
-    cTower.castShadow = true;
-    groundEnvMover.add(cTower);
-
-    const cArm = new THREE.Mesh(new THREE.BoxGeometry(32.0, 3.5, 4.0), craneMat);
-    cArm.position.set(s * 62.0, 72.0, cz);
-    groundEnvMover.add(cArm);
-
-    const warningBeacon = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-    warningBeacon.position.set(s * 75.0, 74.0, cz);
-    groundEnvMover.add(warningBeacon);
-    strobeLeds.push(warningBeacon);
-}
-
-const beamGeo = new THREE.CylinderGeometry(0.5, 32.0, 750, 16, 1, true);
-const beamMat = new THREE.MeshBasicMaterial({
-    color: cfg.env.sun_color, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
-});
-for (let b = 0; b < 10; b++) {
-    const s = (b % 2 === 0) ? 1 : -1;
-    const z = b * 320.0 - 200.0;
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.set(s * 85.0, 320.0, z);
-    beam.rotation.z = s * 0.28;
-    beam.rotation.x = 0.15;
-    groundEnvMover.add(beam);
-}
-
-const delugeGeo = new THREE.SphereGeometry(18.0, 12, 12);
-const delugeMat = new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.0, depthWrite: false });
-const delugePuffs = [];
-for (let p = 0; p < 16; p++) {
-    const puff = new THREE.Mesh(delugeGeo, delugeMat);
-    puff.position.set((Math.random() - 0.5) * 60, -2.0, (Math.random() - 0.5) * 80 - 20);
-    groundEnvMover.add(puff);
-    delugePuffs.push(puff);
-}
-
-const fujiMount = new THREE.Mesh(
-    new THREE.ConeGeometry(12500, 3776, 64),
-    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 })
-);
-fujiMount.position.set(4500, 1800, 14500);
-groundEnvMover.add(fujiMount);
-
-const cloudGroup = new THREE.Group();
-groundEnvMover.add(cloudGroup);
-for (let c = 0; c < 50; c++) {
-    const cloud = new THREE.Mesh(
-        new THREE.PlaneGeometry(3500, 1800),
-        new THREE.MeshBasicMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })
-    );
-    cloud.rotation.x = Math.PI / 2;
-    cloud.position.set((Math.random() - 0.2) * 22000, 900 + (c % 4) * 450, (Math.random() - 0.2) * 22000);
-    cloudGroup.add(cloud);
-}
-
-// =========================================================================
-// 6. 滑らかな補間ノイズによるフォトリアルFBM地球＆都市夜景
-// =========================================================================
-const earthGroup = new THREE.Group();
-scene.add(earthGroup);
-
-const earthShaderMat = new THREE.ShaderMaterial({
+// 改良点⑤: 六角形エネルギーシールド（小惑星デブリ衝突時に波紋発光）
+const shieldMat = new THREE.ShaderMaterial({
     vertexShader: `
         varying vec3 vNormal;
         varying vec3 vWorldPos;
@@ -2024,752 +1126,525 @@ const earthShaderMat = new THREE.ShaderMaterial({
     fragmentShader: `
         varying vec3 vNormal;
         varying vec3 vWorldPos;
-        uniform vec3 uSunDir;
-
-        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
-
-        float smoothNoise(vec2 p) {
-            vec2 i = floor(p);
-            vec2 f = fract(p);
-            vec2 u = f * f * (3.0 - 2.0 * f);
-            return mix(mix(hash(i + vec2(0.0,0.0)), hash(i + vec2(1.0,0.0)), u.x),
-                       mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x), u.y);
-        }
-
-        float fbm(vec2 p) {
-            float v = 0.0; float a = 0.5;
-            for (int i = 0; i < 5; i++) {
-                v += a * smoothNoise(p);
-                p *= 2.0; a *= 0.5;
-            }
-            return v;
-        }
-
+        uniform float uAlpha;
+        uniform float uTime;
         void main() {
             vec3 norm = normalize(vNormal);
-            vec3 viewDir = normalize(cameraPosition - vWorldPos);
-            float light = dot(norm, uSunDir);
-
-            vec2 sphereUv = vec2(atan(norm.z, norm.x) * 0.159 + 0.5, asin(norm.y) * 0.318 + 0.5);
-            float land = smoothstep(0.48, 0.54, fbm(sphereUv * 8.0));
-
-            vec3 oceanCol = vec3(0.012, 0.045, 0.12);
-            vec3 landCol = vec3(0.07, 0.13, 0.08);
-            vec3 dayCol = mix(oceanCol, landCol, land);
-
-            float clouds = smoothstep(0.45, 0.75, fbm(sphereUv * 16.0 + vec2(0.1, 0.0)));
-            dayCol = mix(dayCol, vec3(0.92, 0.95, 1.0), clouds * 0.65);
-
-            float cityLights = pow(smoothNoise(sphereUv * 32.0), 3.0) * land * 14.0;
-            vec3 nightCol = vec3(1.0, 0.75, 0.3) * cityLights;
-
-            float dayFactor = smoothstep(-0.15, 0.25, light);
-            vec3 baseCol = mix(nightCol, dayCol * max(0.08, light), dayFactor);
-
-            float rim = pow(1.0 - max(0.0, dot(norm, viewDir)), 3.0);
-            vec3 atmoCol = vec3(0.25, 0.65, 1.0) * rim * 1.8;
-
-            gl_FragColor = vec4(baseCol + atmoCol, 1.0);
+            float hex = abs(sin(vWorldPos.x * 0.8) * cos(vWorldPos.y * 0.8) * sin(vWorldPos.z * 0.8));
+            float rim = pow(1.0 - abs(dot(norm, vec3(0,0,1))), 3.0);
+            float pattern = smoothstep(0.2, 0.8, hex);
+            gl_FragColor = vec4(0.22, 0.74, 0.98, (rim + pattern * 0.6) * uAlpha);
         }
     `,
-    uniforms: {
-        uSunDir: { value: new THREE.Vector3().fromArray(cfg.env.sun_pos).normalize() }
-    }
+    uniforms: { uAlpha: { value: 0.0 }, uTime: { value: 0.0 } },
+    transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
 });
+const hexShieldMesh = new THREE.Mesh(new THREE.SphereGeometry(18.0, 32, 32), shieldMat);
+shipMeshGroup.add(hexShieldMesh);
 
-const earthSphere = new THREE.Mesh(new THREE.SphereGeometry(25000, 64, 64), earthShaderMat);
-earthGroup.add(earthSphere);
-
-const stationMarker = new THREE.Mesh(new THREE.TorusGeometry(32.0, 4.0, 12, 32), matTitaniumFrame);
-stationMarker.position.set(40.0, -120.0, -450.0);
-scene.add(stationMarker);
-
-const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(6800, 32, 32), new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.85 }));
-scene.add(moonMesh);
-
-const marsFlyby = new THREE.Mesh(new THREE.SphereGeometry(450, 32, 32), new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.8 }));
-marsFlyby.position.set(550, 120, 0);
-marsFlyby.scale.setScalar(0.0001);
-scene.add(marsFlyby);
-
-const jupiterFlyby = new THREE.Mesh(new THREE.SphereGeometry(1800, 32, 32), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.65 }));
-jupiterFlyby.position.set(-2200, 350, 0);
-jupiterFlyby.scale.setScalar(0.0001);
-scene.add(jupiterFlyby);
-
-// =========================================================================
-// 7. ワープ演出（12本二重らせんオーロラ＆ドップラー・スターストレッチ）
-// =========================================================================
-const warpGroup = new THREE.Group();
-warpGroup.scale.setScalar(0.0001);
-scene.add(warpGroup);
-
-const ribbonCount = 12;
-const ribbonTubes = [];
-for (let r = 0; r < ribbonCount; r++) {
-    const rPts = [];
-    const baseOffset = (r / ribbonCount) * Math.PI * 2;
-    for (let z = -280; z <= 280; z += 12) {
-        const ang = (z * 0.04) + baseOffset;
-        const radius = 18.0 + Math.sin(z * 0.02) * 5.0;
-        rPts.push(new THREE.Vector3(Math.cos(ang) * radius, Math.sin(ang) * radius, z));
-    }
-    const curve = new THREE.CatmullRomCurve3(rPts);
-    const tubeGeo = new THREE.TubeGeometry(curve, 64, 0.55, 8, false);
-    const tubeMat = new THREE.MeshBasicMaterial({
-        color: (r % 2 === 0) ? cfg.aurora_hex : 0x38bdf8,
-        transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending
-    });
-    const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
-    warpGroup.add(tubeMesh);
-    ribbonTubes.push(tubeMesh);
+// 改良点⑤: 小惑星デブリ群
+const asteroidGroup = new THREE.Group();
+const asteroidInst = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1.5, 1), new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 }), 30);
+const dummyAst = new THREE.Object3D();
+for (let a = 0; a < 30; a++) {
+    dummyAst.position.set((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 40, 20.0 + a * 8.0);
+    dummyAst.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+    dummyAst.scale.setScalar(0.6 + Math.random() * 1.4);
+    dummyAst.updateMatrix();
+    asteroidInst.setMatrixAt(a, dummyAst.matrix);
 }
+asteroidGroup.add(asteroidInst);
+asteroidGroup.visible = false;
+scene.add(asteroidGroup);
 
-const starCount = 3500;
-const starGeo = new THREE.BufferGeometry();
-const starPos = new Float32Array(starCount * 6);
-const starCol = new Float32Array(starCount * 6);
-for (let i = 0; i < starCount; i++) {
-    const ang = Math.random() * Math.PI * 2;
-    const rad = 25.0 + Math.random() * 220.0;
-    const z = (Math.random() - 0.5) * 600.0;
-    const x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
-    starPos[i * 6] = x; starPos[i * 6 + 1] = y; starPos[i * 6 + 2] = z;
-    starPos[i * 6 + 3] = x; starPos[i * 6 + 4] = y; starPos[i * 6 + 5] = z + 1.0;
-
-    starCol[i * 6] = 0.35; starCol[i * 6 + 1] = 0.85; starCol[i * 6 + 2] = 1.0;
-    starCol[i * 6 + 3] = 0.95; starCol[i * 6 + 4] = 0.15; starCol[i * 6 + 5] = 0.45;
-}
-starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
-const starLines = new THREE.LineSegments(starGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending }));
-warpGroup.add(starLines);
-
-// =========================================================================
-// 8. 目的星・スターゲート＆進入誘導回廊＆ハニカムエネルギー減速膜
-// =========================================================================
-const destWorld = new THREE.Group();
-destWorld.visible = true;
-scene.add(destWorld);
-
-function makeGasGiantTexture() {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
-    const ctx = c.getContext('2d');
-    const colStr = (typeof cfg.dest_color === 'number') ? `#${cfg.dest_color.toString(16).padStart(6, '0')}` : cfg.dest_color;
-    const bandStr = (typeof cfg.dest_band === 'number') ? `#${cfg.dest_band.toString(16).padStart(6, '0')}` : cfg.dest_band;
-    for (let y = 0; y < 512; y++) {
-        const n = Math.sin(y * 0.08) * 0.5 + 0.5;
-        ctx.fillStyle = n > 0.5 ? colStr : bandStr;
-        ctx.fillRect(0, y, 1024, 1);
-    }
-    return new THREE.CanvasTexture(c);
-}
-
-const destPlanetMat = new THREE.MeshStandardMaterial({ map: makeGasGiantTexture(), roughness: 0.65 });
-const destPlanet = new THREE.Mesh(new THREE.SphereGeometry(3200, 64, 64), destPlanetMat);
-destPlanet.position.set(700, -450, 5200);
-destWorld.add(destPlanet);
-
-const atmosphereMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec3 vNormal;
-        void main() {
-            vNormal = normalize(normalMatrix * normal);
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+// 機体本体・主翼・キャノピー
+function createLoftedChassisGeometry() {
+    const sections = [
+        { z: 18.0, w: 0.1, hTop: 0.1, hBtm: 0.1, yOff: 0.0 },
+        { z: 14.0, w: 1.8, hTop: 0.7, hBtm: 0.4, yOff: 0.1 },
+        { z: 9.0,  w: 3.8, hTop: 1.3, hBtm: 0.8, yOff: 0.25 },
+        { z: 4.0,  w: 4.8, hTop: 1.5, hBtm: 1.0, yOff: 0.2 },
+        { z: -2.0, w: 5.4, hTop: 1.6, hBtm: 1.1, yOff: 0.1 },
+        { z: -8.0, w: 5.2, hTop: 1.5, hBtm: 1.2, yOff: 0.0 },
+        { z: -14.0,w: 4.2, hTop: 1.3, hBtm: 1.2, yOff: -0.1 }
+    ];
+    const radialSegs = 24, zSegs = sections.length;
+    const geo = new THREE.BufferGeometry(), pos = [], uvs = [], indices = [];
+    for (let j = 0; j < zSegs; j++) {
+        const sec = sections[j];
+        for (let i = 0; i <= radialSegs; i++) {
+            const theta = (i / radialSegs) * Math.PI * 2;
+            const cosT = Math.cos(theta), sinT = Math.sin(theta);
+            const h = sinT >= 0 ? sec.hTop : sec.hBtm;
+            pos.push(cosT * (sec.w * 0.5), sec.yOff + sinT * h, sec.z);
+            uvs.push(i / radialSegs, j / (zSegs - 1));
         }
+    }
+    for (let j = 0; j < zSegs - 1; j++) {
+        for (let i = 0; i < radialSegs; i++) {
+            const a = j * (radialSegs + 1) + i, b = (j + 1) * (radialSegs + 1) + i;
+            const c = (j + 1) * (radialSegs + 1) + (i + 1), d = j * (radialSegs + 1) + (i + 1);
+            indices.push(a, b, d); indices.push(b, c, d);
+        }
+    }
+    geo.setIndex(indices);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return geo;
+}
+const loftChassisGeo = createLoftedChassisGeometry();
+const chassisMesh = new THREE.Mesh(loftChassisGeo, matHull);
+chassisMesh.castShadow = true;
+shipMeshGroup.add(chassisMesh);
+
+const bellyLoftMesh = new THREE.Mesh(loftChassisGeo, matBellyTile);
+bellyLoftMesh.scale.set(0.985, 0.98, 0.995);
+bellyLoftMesh.position.set(0, -0.06, 0);
+shipMeshGroup.add(bellyLoftMesh);
+
+const halfSpan = cfg.wings_span * 0.5;
+const wingPivots = [];
+for (let s of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(s * 3.2, -0.1, 1.5);
+    shipMeshGroup.add(pivot);
+
+    const wShape = new THREE.Shape();
+    wShape.moveTo(0, 4.0);
+    wShape.lineTo(s * (halfSpan - 3.2), -3.5);
+    wShape.lineTo(s * (halfSpan - 3.6), -7.5);
+    wShape.lineTo(0, -10.5);
+    wShape.closePath();
+
+    const wMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wShape, { depth: 0.32, bevelThickness: 0.12, bevelSize: 0.4 }), matHull);
+    wMesh.rotation.x = Math.PI / 2;
+    wMesh.castShadow = true;
+    pivot.add(wMesh);
+    wingPivots.push({ group: pivot, side: s });
+}
+
+const canopyGlass = new THREE.Mesh(new THREE.ConeGeometry(1.35, 7.5, 16), matCanopy);
+canopyGlass.scale.set(1.0, 0.48, 1.6);
+canopyGlass.rotation.x = Math.PI / 2;
+canopyGlass.position.set(0, 0.95, 8.8);
+shipMeshGroup.add(canopyGlass);
+
+// アルクビエレ・ワープリング
+const warpRingAssembly = new THREE.Group();
+warpRingAssembly.position.set(0, -0.8, -2.5);
+shipMeshGroup.add(warpRingAssembly);
+
+const rotorClockwise = new THREE.Group();
+const rotorCounter = new THREE.Group();
+warpRingAssembly.add(rotorClockwise);
+warpRingAssembly.add(rotorCounter);
+
+const ringSegments = [];
+for (let i = 0; i < 16; i++) {
+    const ang = (i / 16) * Math.PI * 2;
+    const segPivot = new THREE.Group();
+    segPivot.rotation.z = ang;
+    rotorClockwise.add(segPivot);
+
+    const block = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.45, 1.8), matDarkAlloy);
+    block.position.set(0, 6.2, 0);
+    segPivot.add(block);
+
+    const coilCore = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.35, 1.4), new THREE.MeshBasicMaterial({ color: cfg.aurora_hex }));
+    coilCore.position.set(0, 6.2, 0);
+    segPivot.add(coilCore);
+    ringSegments.push({ block, coilCore, baseR: 6.2 });
+}
+rotorCounter.add(new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.18, 12, 48), matCopperCoil));
+
+// 改良点④: 3Dホログラム空間引き出し線HUD
+function makeCalloutSprite(text) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, 248, 56);
+    ctx.fillStyle = 'rgba(2,6,23,0.85)'; ctx.fillRect(4, 4, 248, 56);
+    ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 20px monospace';
+    ctx.fillText(text, 16, 38);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, blending: THREE.AdditiveBlending }));
+    sp.scale.set(6, 1.5, 1);
+    return sp;
+}
+const hudRingLabel = makeCalloutSprite("WARP COIL: 9.85 TeV");
+hudRingLabel.position.set(9.0, 6.5, -2.5);
+shipMeshGroup.add(hudRingLabel);
+
+const hudEngineLabel = makeCalloutSprite("FUSION THRUST: MAX");
+hudEngineLabel.position.set(-9.0, -2.5, -14.0);
+shipMeshGroup.add(hudEngineLabel);
+
+// ノズル＆推進炎
+const nozzleGimbalRoot = new THREE.Group();
+nozzleGimbalRoot.position.set(0, 0, -14.2);
+shipMeshGroup.add(nozzleGimbalRoot);
+
+const heatShroud = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.8, 2.4, 24, 1, true), matTitaniumFrame);
+heatShroud.rotation.x = Math.PI / 2;
+heatShroud.position.z = -0.6;
+nozzleGimbalRoot.add(heatShroud);
+
+const plumeRoot = new THREE.Group();
+plumeRoot.position.set(0, 0, -2.3);
+nozzleGimbalRoot.add(plumeRoot);
+
+const flameShaderMat = new THREE.ShaderMaterial({
+    vertexShader: `
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: `
-        varying vec3 vNormal;
+        varying vec2 vUv;
+        uniform float uTime;
+        uniform vec3 uColor;
         void main() {
-            float intensity = pow(0.65 - dot(vNormal, vec3(0, 0, 1.0)), 2.5);
-            gl_FragColor = vec4(0.38, 0.75, 0.98, 1.0) * intensity;
+            float noise = sin(vUv.y * 35.0 - uTime * 28.0) * cos(vUv.x * 20.0 + uTime * 15.0);
+            float core = pow(1.0 - abs(vUv.x - 0.5) * 2.0, 3.0);
+            float taper = pow(1.0 - vUv.y, 1.5);
+            vec3 col = mix(uColor, vec3(1.0, 1.0, 1.0), core * 0.85);
+            gl_FragColor = vec4(col, clamp((core + noise * 0.25) * taper * 0.9, 0.0, 1.0));
         }
     `,
-    blending: THREE.AdditiveBlending,
-    side: THREE.BackSide,
-    transparent: true
+    uniforms: { uTime: { value: 0.0 }, uColor: { value: new THREE.Color(cfg.flame_hex) } },
+    transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
 });
-const atmosphereGlow = new THREE.Mesh(new THREE.SphereGeometry(3350, 48, 48), atmosphereMat);
-atmosphereGlow.position.copy(destPlanet.position);
-destWorld.add(atmosphereGlow);
+const jetCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 4.8, 44.0, 32, 1, true), flameShaderMat);
+jetCylinder.rotation.x = Math.PI / 2;
+jetCylinder.position.z = -22.0;
+plumeRoot.add(jetCylinder);
 
-const stargateGroup = new THREE.Group();
-destWorld.add(stargateGroup);
-const gateOuter = new THREE.Mesh(new THREE.TorusGeometry(65, 4.8, 20, 64), matTitaniumFrame);
-gateOuter.castShadow = true;
-stargateGroup.add(gateOuter);
+// =========================================================================
+// 5. カタパルト＆射場＆地球＆目標惑星
+// =========================================================================
+const catapultSlopeRoot = new THREE.Group();
+catapultSlopeRoot.rotation.x = -radAngle;
+scene.add(catapultSlopeRoot);
 
-const gateFieldMesh = new THREE.Mesh(
-    new THREE.CircleGeometry(64.0, 32),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+const railMover = new THREE.Group();
+catapultSlopeRoot.add(railMover);
+railMover.add(new THREE.Mesh(new THREE.BoxGeometry(14.5, 2.4, 3600), matDarkAlloy));
+
+const groundEnvMover = new THREE.Group();
+scene.add(groundEnvMover);
+const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(160000, 160000), new THREE.MeshStandardMaterial({ color: 0x021124, roughness: 0.3 }));
+seaMesh.rotation.x = -Math.PI / 2;
+seaMesh.position.y = -45.0;
+groundEnvMover.add(seaMesh);
+
+const fujiMount = new THREE.Mesh(new THREE.ConeGeometry(12500, 3776, 64), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 }));
+fujiMount.position.set(4500, 1800, 14500);
+groundEnvMover.add(fujiMount);
+
+// 地球
+const earthGroup = new THREE.Group();
+scene.add(earthGroup);
+earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(25000, 48, 48), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.6 })));
+
+// 改良点③: 目標惑星＆巨大スターゲート宇宙港＆地表着陸パッド
+const destWorld = new THREE.Group();
+scene.add(destWorld);
+
+const destPlanet = new THREE.Mesh(
+    new THREE.SphereGeometry(3200, 64, 64),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color(cfg.dest_color), roughness: 0.7 })
 );
-stargateGroup.add(gateFieldMesh);
+destPlanet.position.set(0, -3200, 0);
+destWorld.add(destPlanet);
 
-const corridorGeo = new THREE.SphereGeometry(1.5, 8, 8);
-const corridorMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-const corridorInst = new THREE.InstancedMesh(corridorGeo, corridorMat, 40);
-for (let b = 0; b < 20; b++) {
-    const bz = -b * 250.0 - 150.0;
-    dummy.position.set(-45.0, 0, bz);
-    dummy.updateMatrix();
-    corridorInst.setMatrixAt(b * 2, dummy.matrix);
-    dummy.position.set(45.0, 0, bz);
-    dummy.updateMatrix();
-    corridorInst.setMatrixAt(b * 2 + 1, dummy.matrix);
-}
-stargateGroup.add(corridorInst);
+const cloudSea = new THREE.Mesh(
+    new THREE.SphereGeometry(3240, 48, 48),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 })
+);
+cloudSea.position.copy(destPlanet.position);
+destWorld.add(cloudSea);
+
+const landingBasePad = new THREE.Mesh(
+    new THREE.CylinderGeometry(80, 95, 12, 32),
+    new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.3 })
+);
+landingBasePad.position.set(0, 0, 0);
+destWorld.add(landingBasePad);
+
+const landingPadLightRing = new THREE.Mesh(
+    new THREE.TorusGeometry(72, 1.2, 8, 32),
+    new THREE.MeshBasicMaterial({ color: 0x10b981 })
+);
+landingPadLightRing.rotation.x = Math.PI / 2;
+landingPadLightRing.position.set(0, 6.2, 0);
+destWorld.add(landingPadLightRing);
 
 destWorld.position.set(0, 0, 800000.0);
 destWorld.scale.setScalar(0.0001);
 
-const tetherLines = [];
-const tetherMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, linewidth: 2 });
-for (let k = 0; k < 6; k++) {
-    const tGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)]);
-    const tLine = new THREE.Line(tGeo, tetherMat);
-    destWorld.add(tLine);
-    tetherLines.push(tLine);
+// ワープトンネル
+const warpGroup = new THREE.Group();
+warpGroup.scale.setScalar(0.0001);
+scene.add(warpGroup);
+
+for (let r = 0; r < 12; r++) {
+    const rPts = [];
+    const baseOffset = (r / 12) * Math.PI * 2;
+    for (let z = -280; z <= 280; z += 14) {
+        const ang = (z * 0.04) + baseOffset;
+        rPts.push(new THREE.Vector3(Math.cos(ang) * 22.0, Math.sin(ang) * 22.0, z));
+    }
+    const tubeMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rPts), 64, 0.55, 8, false),
+        new THREE.MeshBasicMaterial({ color: (r % 2 === 0) ? cfg.aurora_hex : 0x38bdf8, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending })
+    );
+    warpGroup.add(tubeMesh);
 }
 
-renderer.compile(scene, cameraMain);
-renderer.compile(scene, cameraPip);
-
 // =========================================================================
-// 9. 2段スタッガー式・広角軌道レーダーマップ
+// 6. 軌道レーダー描画
 // =========================================================================
 function drawRadar(prog, vc, mach, altKm) {
-    const rw = radarCanvas.width;
-    const rh = radarCanvas.height;
+    const rw = radarCanvas.width, rh = radarCanvas.height;
     rCtx.clearRect(0, 0, rw, rh);
-
-    const isSolar = (prog >= 0.12);
+    const isSolar = (prog >= 0.16 && prog < 0.88);
     radarLabelEl.innerHTML = isSolar
         ? `TACTICAL RADAR<br><span style="color:#10b981;font-size:8px;">INTERPLANETARY SCALE</span>`
-        : `TACTICAL RADAR<br><span style="color:#38bdf8;font-size:8px;">LUNAR ESCAPE SCALE</span>`;
+        : `TACTICAL RADAR<br><span style="color:#38bdf8;font-size:8px;">ORBIT / DESCENT SCALE</span>`;
 
-    const leftX = 75, rightX = rw - 85;
-    const midY = rh / 2;
-
-    rCtx.strokeStyle = 'rgba(56,189,248,0.3)';
-    rCtx.lineWidth = 3;
-    rCtx.beginPath();
-    rCtx.moveTo(leftX, midY); rCtx.lineTo(rightX, midY);
-    rCtx.stroke();
-
+    const leftX = 75, rightX = rw - 85, midY = rh / 2;
+    rCtx.strokeStyle = 'rgba(56,189,248,0.3)'; rCtx.lineWidth = 3;
+    rCtx.beginPath(); rCtx.moveTo(leftX, midY); rCtx.lineTo(rightX, midY); rCtx.stroke();
     rCtx.textAlign = "center";
+
     if (!isSolar) {
         const markers = [
             { x: leftX, lbl: "EARTH", sub: "0 km" },
-            { x: leftX + (rightX - leftX) * 0.38, lbl: "LEO / GEO", sub: "36,000 km" },
-            { x: rightX, lbl: "MOON", sub: "384,400 km" }
+            { x: leftX + (rightX - leftX) * 0.5, lbl: "LEO / GEO", sub: "36,000 km" },
+            { x: rightX, lbl: "TARGET PAD", sub: "TOUCHDOWN" }
         ];
         markers.forEach(m => {
-            rCtx.fillStyle = '#38bdf8';
-            rCtx.beginPath(); rCtx.arc(m.x, midY, 4, 0, Math.PI * 2); rCtx.fill();
-            rCtx.font = 'bold 10px monospace';
-            rCtx.fillStyle = '#f8fafc';
-            rCtx.fillText(m.lbl, m.x, midY - 14);
-            rCtx.font = '8.5px monospace';
-            rCtx.fillStyle = '#94a3b8';
-            rCtx.fillText(m.sub, m.x, midY + 18);
+            rCtx.fillStyle = '#38bdf8'; rCtx.beginPath(); rCtx.arc(m.x, midY, 4, 0, Math.PI * 2); rCtx.fill();
+            rCtx.font = 'bold 10px monospace'; rCtx.fillStyle = '#f8fafc'; rCtx.fillText(m.lbl, m.x, midY - 14);
         });
-
-        const shipNorm = Math.min(1.0, altKm / 384400.0);
-        const curX = leftX + shipNorm * (rightX - leftX);
-        rCtx.fillStyle = '#f43f5e';
-        rCtx.beginPath(); rCtx.arc(curX, midY, 6, 0, Math.PI * 2); rCtx.fill();
-        rCtx.strokeStyle = '#ffffff'; rCtx.lineWidth = 2; rCtx.stroke();
-
-        rCtx.font = 'bold 9px monospace';
-        rCtx.fillStyle = '#f43f5e';
-        rCtx.fillText(`VESSEL (M ${mach.toFixed(1)})`, curX, midY - 26);
+        const curX = leftX + THREE.MathUtils.clamp(prog, 0.0, 1.0) * (rightX - leftX);
+        rCtx.fillStyle = '#f43f5e'; rCtx.beginPath(); rCtx.arc(curX, midY, 6, 0, Math.PI * 2); rCtx.fill();
     } else {
-        const solarMarkers = [
-            { pos: 0.12, lbl: "EARTH", sub: "1.0 AU" },
-            { pos: 0.38, lbl: "MARS", sub: "1.5 AU" },
-            { pos: 0.68, lbl: "JUPITER", sub: "5.2 AU" },
-            { pos: 0.98, lbl: "SATURN GATE", sub: "9.5 AU" }
-        ];
-        solarMarkers.forEach((sm) => {
-            const sx = leftX + ((sm.pos - 0.12) / 0.86) * (rightX - leftX);
-            rCtx.fillStyle = '#94a3b8';
-            rCtx.beginPath(); rCtx.arc(sx, midY, 4, 0, Math.PI * 2); rCtx.fill();
-            rCtx.font = 'bold 10px monospace';
-            rCtx.fillStyle = '#f8fafc';
-            rCtx.fillText(sm.lbl, sx, midY - 14);
-            rCtx.font = '8.5px monospace';
-            rCtx.fillStyle = '#94a3b8';
-            rCtx.fillText(sm.sub, sx, midY + 18);
-        });
-
-        const curX = leftX + ((prog - 0.12) / 0.86) * (rightX - leftX);
-        rCtx.fillStyle = '#10b981';
-        rCtx.beginPath(); rCtx.arc(curX, midY, 7, 0, Math.PI * 2); rCtx.fill();
-        rCtx.strokeStyle = '#ffffff'; rCtx.lineWidth = 2; rCtx.stroke();
-
-        rCtx.font = 'bold 9px monospace';
-        rCtx.fillStyle = '#10b981';
-        rCtx.fillText(`NOW: ${vc.toFixed(3)} c`, curX, midY - 26);
+        const curX = leftX + ((prog - 0.16) / 0.72) * (rightX - leftX);
+        rCtx.fillStyle = '#10b981'; rCtx.beginPath(); rCtx.arc(curX, midY, 7, 0, Math.PI * 2); rCtx.fill();
     }
 }
 
 // =========================================================================
-// 10. 60fps アニメーションループ（暗転解消・宣言順序完全整合・CAM02同期）
+// 7. 再生コントローラー＆シーク制御
 // =========================================================================
-const startTime = performance.now();
-const pipTitleEl = document.getElementById('pip-title');
-const pipMetricEl = document.getElementById('pip-metric');
+let isPlaying = true;
+let playbackSpeed = 1.0;
+let currentTime = -5.0;
+let lastTimestamp = performance.now();
+
+const playPauseBtn = document.getElementById('play-pause-btn');
+const speed02Btn = document.getElementById('speed-02');
+const speed10Btn = document.getElementById('speed-10');
+const speed20Btn = document.getElementById('speed-20');
+const timelineSlider = document.getElementById('timeline-slider');
+
+playPauseBtn.addEventListener('click', () => {
+    isPlaying = !isPlaying;
+    playPauseBtn.innerText = isPlaying ? "PAUSE" : "PLAY";
+    controls.enabled = !isPlaying; // 改良点⑤: 一時停止時はマウスで360度機体を観察可能
+});
+
+function setSpeed(speed, btn) {
+    playbackSpeed = speed;
+    [speed02Btn, speed10Btn, speed20Btn].forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+speed02Btn.addEventListener('click', () => setSpeed(0.2, speed02Btn));
+speed10Btn.addEventListener('click', () => setSpeed(1.0, speed10Btn));
+speed20Btn.addEventListener('click', () => setSpeed(2.0, speed20Btn));
+
+timelineSlider.addEventListener('input', (e) => {
+    const ratio = parseFloat(e.target.value) / 100.0;
+    const maxT = frames[frames.length - 1].t;
+    currentTime = -5.0 + ratio * (maxT - (-5.0));
+});
+
+// =========================================================================
+// 8. 60fps アニメーションループ（バネ追従カメラ＆全改良点同期）
+// =========================================================================
+const cameraIdealPos = new THREE.Vector3();
+const cameraLookTarget = new THREE.Vector3();
+const shipWorldPos = new THREE.Vector3();
 
 function animate(now) {
     requestAnimationFrame(animate);
 
-    const elapsed = (now - startTime) / 1000.0;
-    const simTime = cfg.is_preview ? -5.0 : (-5.0 + elapsed * 1.65);
+    const delta = (now - lastTimestamp) / 1000.0;
+    lastTimestamp = now;
+
+    // 改良点②: 倍速トラップを全廃し、実時間等倍再生へ
+    if (isPlaying && !cfg.is_preview) {
+        currentTime += delta * playbackSpeed;
+        const maxT = frames[frames.length - 1].t;
+        if (currentTime > maxT) currentTime = maxT;
+        timelineSlider.value = ((currentTime - (-5.0)) / (maxT - (-5.0))) * 100.0;
+    }
 
     let idx = 0;
-    while (idx < frames.length - 1 && frames[idx + 1].t <= simTime) idx++;
+    while (idx < frames.length - 1 && frames[idx + 1].t <= currentTime) idx++;
     const f0 = frames[idx];
     const f1 = frames[Math.min(frames.length - 1, idx + 1)];
-    const dt = f1.t - f0.t;
-    const alpha = dt > 0.0001 ? THREE.MathUtils.clamp((simTime - f0.t) / dt, 0.0, 1.0) : 0.0;
+    const dtFrame = f1.t - f0.t;
+    const alpha = dtFrame > 0.0001 ? THREE.MathUtils.clamp((currentTime - f0.t) / dtFrame, 0.0, 1.0) : 0.0;
     const L = (k) => THREE.MathUtils.lerp(f0[k], f1[k], alpha);
 
-    // ★修正: すべての補間変数を関数の先頭で確実に取得（宣言前参照エラーを根絶）
-    const distM = L('dist_m');
-    const altKm = L('alt_km');
-    const mach = L('mach');
-    const vc = L('vc');
-    const pitchDeg = L('pitch_deg');
-    const yawDeg = L('yaw_deg');
-    const vib = L('vib');
-    const prog = L('progress');
-    const tempK = L('temp_k');
-    const gLoad = L('g');
-    const engPwr = L('engine_power');
-    const rcsBurst = L('rcs_burst');
-    const vAlpha = L('vapor_alpha');
-    const pAlpha = L('plasma_alpha');
-    const sArc = L('spark_arc');
-    const wCharge = L('warp_charge');
-    const wAct = L('warp_active');
-    const wBoom = L('warp_boom');
-    const wLens = L('warp_lens');
-    const nozVal = L('nozzle_open');
-    const bayVal = L('bay_open');
-    const sabotP = L('sabot_purge');
-    const fairingP = L('fairing_purge');
-    const tLock = L('tether_lock');
+    const distM = L('dist_m'), altKm = L('alt_km'), mach = L('mach'), vc = L('vc');
+    const pitchDeg = L('pitch_deg'), yawDeg = L('yaw_deg'), rollDeg = L('roll_deg');
+    const vib = L('vib'), prog = L('progress'), tempK = L('temp_k'), gLoad = L('g');
+    const engPwr = L('engine_power'), rcsBurst = L('rcs_burst'), pAlpha = L('plasma_alpha');
+    const wCharge = L('warp_charge'), wAct = L('warp_active'), wBoom = L('warp_boom'), wLens = L('warp_lens');
+    const sabotP = L('sabot_purge'), boosterP = L('booster_purge'), gearD = L('gear_deploy');
+    const shieldHit = L('shield_hit');
 
-    // ネイティブ英語音声コールアウト
+    // 改良点②: フェーズ移行時の大型テロップ＆音声
     if (f0.phase !== lastAnnouncedPhase) {
         lastAnnouncedPhase = f0.phase;
-        if (f0.phase === "CATAPULT_RAIL_ACCEL") speakCallout("Magnetic catapult engaged. Maximum acceleration.");
-        else if (f0.phase === "EXOSPHERE_INSERTION") speakCallout("Leaving atmosphere. Orbital velocity achieved.");
-        else if (f0.phase === "WARP_FIELD_COMPRESSION") speakCallout("Alcubierre drive spooling up. Warp field compression.");
-        else if (f0.phase === "ALCUBIERRE_HYPER_WARP") speakCallout("Hyper warp engaged. Approaching light speed.");
-        else if (f0.phase === "DEBRIS_RETRO_BRAKING") speakCallout("Flip and burn initiated. Laser defense online.");
-        else if (f0.phase === "STARGATE_DOCKING_LOCKED") speakCallout("Stargate tether captured. Docking locked.");
+        if (f0.phase === "CATAPULT_RAIL_ACCEL") {
+            showCinematicBanner("STAGE 01", "SUPERSONIC CATAPULT ACCELERATION");
+            speakCallout("Magnetic catapult engaged. Maximum acceleration.");
+        } else if (f0.phase === "STRATOSPHERE_CLIMB") {
+            showCinematicBanner("STAGE 02", "ATMOSPHERIC ASCENT & ESCAPE");
+            speakCallout("Approaching max Q. Clearing stratosphere.");
+        } else if (f0.phase === "WARP_FIELD_COMPRESSION") {
+            showCinematicBanner("STAGE 03", "ALCUBIERRE WARP FIELD CHARGE");
+            speakCallout("Spooling warp coils. Spacetime compression active.");
+        } else if (f0.phase === "ALCUBIERRE_HYPER_WARP") {
+            showCinematicBanner("STAGE 04", "SUPERLUMINAL HYPER-DRIVE");
+            speakCallout("Hyper warp engaged. Approaching light speed.");
+        } else if (f0.phase === "DEBRIS_RETRO_BRAKING") {
+            showCinematicBanner("STAGE 05", "FLIP & BURN / ASTEROID DEFENSE");
+            speakCallout("Flip and burn initiated. Point defense shield armed.");
+        } else if (f0.phase === "ATMOSPHERIC_ENTRY_DESCENT") {
+            showCinematicBanner("STAGE 06", "PLANETARY ATMOSPHERIC ENTRY");
+            speakCallout("Entering destination atmosphere. Heat shields nominal.");
+        } else if (f0.phase === "FINAL_DESCENT_TOUCHDOWN") {
+            showCinematicBanner("STAGE 07", "TERMINAL TOUCHDOWN DESCENT");
+            speakCallout("Gear deployed. Retro-thrusters firing for touchdown.");
+        }
     }
 
-    const slowShake = Math.sin(now * 0.003) * Math.cos(now * 0.002) * 1.8;
-    const fastShake = (Math.sin(now * 0.055) + Math.cos(now * 0.085)) * vib * 0.8;
-    const gLag = Math.min(26.0, gLoad * 1.6 + engPwr * 8.0);
-
-    let effectiveCam = activeCamMode;
-    if (activeCamMode === 0) {
-        if (f0.phase.includes("STANDBY") || f0.phase.includes("CHARGE")) effectiveCam = 1;
-        else if (f0.phase === "CATAPULT_RAIL_ACCEL") effectiveCam = (simTime < 1.6) ? 4 : 1;
-        else if (f0.phase.includes("CLIMB") || f0.phase.includes("INSERTION")) effectiveCam = 1;
-        else if (f0.phase === "WARP_FIELD_COMPRESSION") effectiveCam = 3;
-        else if (f0.phase === "ALCUBIERRE_HYPER_WARP") effectiveCam = 1;
-        else if (f0.phase === "DEBRIS_RETRO_BRAKING") effectiveCam = 4;
-        else effectiveCam = 1;
-    }
-
-    const shipWorldPos = new THREE.Vector3();
-    shipMeshGroup.getWorldPosition(shipWorldPos);
-
-    if (effectiveCam === 1) {
-        const dynTargetZ = THREE.MathUtils.lerp(-2.0, -8.0, engPwr);
-        cameraMain.position.x = baseCamPos.x + slowShake * 0.35;
-        cameraMain.position.y = baseCamPos.y + slowShake * 0.25;
-        cameraMain.position.z = baseCamPos.z - gLag + fastShake;
-        cameraMain.lookAt(0.0, baseTarget.y, dynTargetZ);
-    } else if (effectiveCam === 2) {
-        cameraMain.position.set(shipWorldPos.x, shipWorldPos.y + 1.25, shipWorldPos.z + 8.2);
-        cameraMain.lookAt(shipWorldPos.x, shipWorldPos.y + 1.25, shipWorldPos.z + 140.0);
-    } else if (effectiveCam === 3) {
-        cameraMain.position.set(shipWorldPos.x - (halfSpan + 2.5), shipWorldPos.y + 1.2, shipWorldPos.z - 4.5);
-        cameraMain.lookAt(shipWorldPos.x, shipWorldPos.y + 0.5, shipWorldPos.z);
-    } else if (effectiveCam === 4) {
-        cameraMain.position.set(38.0, 18.0, 140.0 - (f0.phase === "DEBRIS_RETRO_BRAKING" ? 0 : distM * 0.02));
-        cameraMain.lookAt(shipWorldPos);
-    }
-
-    railMover.position.set(0, 0, -distM);
-    const groundY = -distM * Math.sin(radAngle);
-    const groundZ = -distM * Math.cos(radAngle);
-    groundEnvMover.position.set(0, groundY, groundZ);
-
+    // 改良点④: 機体の飛行姿勢（ピッチ・ヨー・ロール）の滑らかな3次元合成
     const isRailRunning = (altKm < 1.2 && f0.phase === "CATAPULT_RAIL_ACCEL");
     if (isRailRunning) {
         shipPitchGroup.rotation.set(0, 0, 0);
         shipMeshGroup.position.set(0, 0, 0);
     } else {
         const freePitch = -THREE.MathUtils.degToRad(pitchDeg) + radAngle;
-        shipPitchGroup.rotation.set(freePitch, THREE.MathUtils.degToRad(yawDeg), 0);
+        shipPitchGroup.rotation.set(freePitch, THREE.MathUtils.degToRad(yawDeg), THREE.MathUtils.degToRad(rollDeg));
+        // 機体の慣性オフセット揺らぎ
         shipMeshGroup.position.set(
-            Math.sin(now * 0.045) * vib * 0.35,
-            Math.cos(now * 0.055) * vib * 0.35,
-            Math.sin(now * 0.035) * vib * 0.35
+            Math.sin(now * 0.003) * 0.4 + (Math.random() - 0.5) * vib * 0.5,
+            Math.cos(now * 0.004) * 0.3 + (Math.random() - 0.5) * vib * 0.5,
+            Math.sin(now * 0.002) * 0.6
         );
     }
 
-    // 推力偏向ノズル
-    nozzleGimbalRoot.rotation.x = THREE.MathUtils.degToRad(pitchDeg > 5 ? -6.0 : 0.0);
-    nozzleGimbalRoot.rotation.y = THREE.MathUtils.degToRad(Math.sin(now * 0.05) * 4.0 * (rcsBurst > 0.1 ? 2.0 : 0.5));
+    shipMeshGroup.getWorldPosition(shipWorldPos);
 
-    cameraMain.fov = 46.0 + vc * 24.0 + (mach > 5 ? 4.0 : 0.0);
-    cameraMain.updateProjectionMatrix();
-
-    oceanShaderMat.uniforms.uTime.value = elapsed;
-    flameShaderMat.uniforms.uTime.value = elapsed;
-    vaporShaderMat.uniforms.uTime.value = elapsed;
-    warpGridMat.uniforms.uTime.value = elapsed;
-    warpGridMat.uniforms.uAlpha.value = THREE.MathUtils.lerp(0.0, 0.85, wCharge);
-
-    // 近景スペースダスト
-    const speedRatio = THREE.MathUtils.clamp((mach / 40.0) + (vc * 8.0), 0.08, 12.0);
-    const dArr = dustGeo.attributes.position.array;
-    for (let i = 0; i < dustCount; i++) {
-        let z = dArr[i * 6 + 2] - speedRatio * 3.5;
-        if (z < -110.0) z = 110.0;
-        dArr[i * 6 + 2] = z;
-        dArr[i * 6 + 5] = z - (2.5 + speedRatio * 4.5);
-    }
-    dustGeo.attributes.position.needsUpdate = true;
-
-    // 空間誘導ゲート
-    for (let wr = 0; wr < waypointRingCount; wr++) {
-        const ring = waypointRings[wr];
-        let rz = ring.position.z - speedRatio * 4.2;
-        if (rz < -80.0) rz += waypointRingCount * 75.0;
-        ring.position.z = rz;
-        ring.material.opacity = (f0.phase.includes("WARP") || altKm > 50.0) ? 0.5 : 0.0;
-    }
-
-    const fogFade = THREE.MathUtils.clamp(1.0 - (altKm / 45.0), 0.0, 1.0);
-    scene.fog.density = cfg.env.fog_density * fogFade;
-
-    if (simTime < 3.0 && cfg.cryo_steam) {
-        const dAlpha = (simTime > -1.8 && simTime < 1.5) ? 0.45 : (simTime < -1.8 ? 0.15 : 0.0);
-        delugeMat.opacity = dAlpha;
-        delugePuffs.forEach((puff, i) => {
-            puff.scale.setScalar(1.0 + (simTime + 5.0) * 0.8 + Math.sin(elapsed * 2.0 + i) * 0.2);
-            puff.position.y = -2.0 + (simTime + 5.0) * 1.2;
-        });
-    } else {
-        delugeMat.opacity = 0.0;
-    }
-
-    if (mach >= 1.0 && mach <= 2.2) {
-        const boomF = 1.0 - Math.abs(mach - 1.5) / 0.7;
-        sonicBoomDiscMat.opacity = boomF * 0.85;
-        sonicBoomDisc.scale.setScalar(1.0 + boomF * 3.2);
-        sonicBoomDisc.position.z = -boomF * 12.0;
-        if (!hasTriggeredBoom) {
-            hasTriggeredBoom = true;
-            playSonicBoomSound();
+    // 改良点①: カメラのバネ追従（Spring Damping）制御
+    if (!controls.enabled) {
+        if (activeCamMode === 0 || activeCamMode === 1) {
+            cameraIdealPos.set(
+                shipWorldPos.x + baseCamPos.x,
+                shipWorldPos.y + baseCamPos.y,
+                shipWorldPos.z + baseCamPos.z - (engPwr * 8.0)
+            );
+            cameraLookTarget.set(shipWorldPos.x, shipWorldPos.y + baseTarget.y, shipWorldPos.z + baseTarget.z);
+            cameraMain.position.lerp(cameraIdealPos, 0.05);
+            cameraMain.lookAt(cameraLookTarget);
+        } else if (activeCamMode === 2) {
+            cameraMain.position.set(shipWorldPos.x, shipWorldPos.y + 1.2, shipWorldPos.z + 8.0);
+            cameraMain.lookAt(shipWorldPos.x, shipWorldPos.y + 1.2, shipWorldPos.z + 100.0);
+        } else if (activeCamMode === 3) {
+            cameraMain.position.set(shipWorldPos.x - halfSpan - 4.0, shipWorldPos.y + 2.0, shipWorldPos.z - 6.0);
+            cameraMain.lookAt(shipWorldPos);
+        } else if (activeCamMode === 4) {
+            cameraMain.position.set(45.0, 22.0, shipWorldPos.z + 60.0);
+            cameraMain.lookAt(shipWorldPos);
         }
     } else {
-        sonicBoomDiscMat.opacity = 0.0;
+        controls.update();
     }
 
-    vaporShaderMat.uniforms.uAlpha.value = vAlpha * 0.75;
-    wingtipVortices.forEach(v => { v.mat.opacity = vAlpha * 0.85; });
+    // カタパルト・メガフロート移動
+    railMover.position.set(0, 0, -distM);
+    groundEnvMover.position.set(0, -distM * Math.sin(radAngle), -distM * Math.cos(radAngle));
 
-    plasmaBowMat.opacity = pAlpha * 0.85;
-    leadingEdgeMat.opacity = pAlpha * 0.95;
-    sparkMat.opacity = pAlpha > 0.1 ? 0.85 : 0.0;
-
-    if (tempK > 700.0) {
-        const glowProg = Math.min(1.0, (tempK - 700.0) / 1200.0);
-        const glowColor = new THREE.Color().lerpColors(new THREE.Color(0xd97706), new THREE.Color(0xf8fafc), glowProg * 0.7);
-        matBellyTile.emissive.copy(glowColor);
-        matBellyTile.emissiveIntensity = glowProg * 1.8;
-        matHull.emissive.copy(glowColor);
-        matHull.emissiveIntensity = glowProg * 0.8;
-    } else {
-        matBellyTile.emissiveIntensity = 0.0;
-        matHull.emissiveIntensity = 0.0;
-    }
-
-    if (sArc > 0.05 && f0.phase === "CATAPULT_RAIL_ACCEL") {
-        arcLineMat.opacity = 0.95;
-        arcLight.intensity = 3.5 + Math.random() * 4.0;
-        const arcPos = arcLine.geometry.attributes.position;
-        const jX = (Math.random() - 0.5) * 1.4, jY = (Math.random() - 0.5) * 1.4;
-        arcPos.setXYZ(0, -3.8 + jX, -1.2 + jY, -distM + 2.0);
-        arcPos.setXYZ(1, 3.8 - jX, -1.2 - jY, -distM - 4.0);
-        arcPos.needsUpdate = true;
-        arcLight.position.set(0, -1.0, -distM);
-    } else {
-        arcLineMat.opacity = 0.0;
-        arcLight.intensity = 0.0;
-    }
-
-    warpPass.uniforms.uDistort.value = wBoom * 2.8 + wAct * 0.35;
-    warpPass.uniforms.uTime.value = elapsed;
-    warpPass.uniforms.uDroplets.value = (altKm < 8.0 && simTime > 0.0) ? 1.0 - (altKm / 8.0) : 0.0;
-    warpPass.uniforms.uGForce.value = gLoad;
-
-    const flashState = (Math.floor(now * 0.004) % 2 === 0);
-    strobeLeds.forEach(led => { led.visible = flashState; });
-
-    if (altKm < 110.0 && f0.phase !== "WARP_FIELD_COMPRESSION" && f0.phase !== "ALCUBIERRE_HYPER_WARP") {
-        catapultSlopeRoot.visible = true;
-        groundEnvMover.visible = true;
-    } else {
-        catapultSlopeRoot.visible = false;
-        groundEnvMover.visible = false;
-    }
-
-    spaceFieldGroup.rotation.y = elapsed * 0.002;
-    if (prog < 0.28) {
-        earthGroup.visible = true;
-        const warpRecede = Math.pow(Math.max(0, prog - 0.05) * 18.0, 3.0);
-        earthGroup.position.set(0, -25050 - altKm * 120.0 - warpRecede * 35000.0, -4000 - distM * 0.6 - warpRecede * 95000.0);
-        earthGroup.scale.setScalar(Math.max(0.001, 1.0 / (1.0 + warpRecede * 1.8)));
-
-        moonMesh.visible = (altKm > 100.0);
-        moonMesh.position.set(8000, 3500, -12000 - (prog / 0.12) * 80000.0);
-        stationMarker.visible = (altKm > 80.0 && prog < 0.05);
-        stationMarker.position.z = -150.0 - (altKm - 80.0) * 85.0;
-    } else {
-        earthGroup.visible = false;
-        moonMesh.visible = false;
-        stationMarker.visible = false;
-    }
-
-    if (prog >= 0.30 && prog <= 0.48) {
-        marsFlyby.scale.setScalar(1.0);
-        marsFlyby.position.z = 250.0 - ((prog - 0.30) / 0.18) * 600.0;
-    } else {
-        marsFlyby.scale.setScalar(0.0001);
-    }
-    if (prog >= 0.60 && prog <= 0.78) {
-        jupiterFlyby.scale.setScalar(1.0);
-        jupiterFlyby.position.z = 450.0 - ((prog - 0.60) / 0.18) * 1100.0;
-    } else {
-        jupiterFlyby.scale.setScalar(0.0001);
-    }
-
-    if (sabotP > 0.01) {
-        sabotClamps.forEach(sc => {
-            sc.mesh.position.x = sc.baseX + sc.side * Math.pow(sabotP, 2.0) * 14.0;
-            sc.mesh.position.y = -1.4 - Math.pow(sabotP, 2.0) * 8.0;
-            sc.mesh.position.z = -1.0 - Math.pow(sabotP, 1.5) * 45.0;
-            sc.mesh.rotation.set(sabotP * 8.0, sabotP * 6.0 * sc.side, 0);
+    // 改良点④: 補助ブースター分離アニメーション
+    if (boosterP > 0.01) {
+        boosterAssemblies.forEach(ba => {
+            const spread = Math.pow(boosterP, 2.0) * 22.0;
+            ba.group.position.x = ba.baseX + ba.side * spread;
+            ba.group.position.y = -0.6 - Math.pow(boosterP, 2.0) * 12.0;
+            ba.group.position.z = -2.0 - Math.pow(boosterP, 1.8) * 35.0;
+            ba.group.rotation.x = boosterP * 5.0;
+            ba.group.rotation.z = ba.side * boosterP * 4.0;
         });
     }
 
-    if (fairingP > 0.01) {
-        fairingPanels.forEach(fp => {
-            const spread = Math.pow(fairingP, 2.0) * 35.0;
-            fp.mesh.position.x = fp.baseX + Math.cos(fp.ang) * spread;
-            fp.mesh.position.y = fp.baseY + Math.sin(fp.ang) * spread;
-            fp.mesh.position.z = 1.0 - Math.pow(fairingP, 1.5) * 55.0;
-            fp.mesh.rotation.x = fairingP * 6.0;
-            fp.mesh.rotation.y = fairingP * 8.0;
-        });
-    }
-
-    wingPivots.forEach(wp => { wp.group.rotation.y = wp.side * L('wing_sweep') * 0.32; });
-    bayDoors.forEach(bd => { bd.pivot.rotation.z = bd.side * bayVal * 1.35; });
-    hydraulicPistons.forEach(hp => {
-        hp.rod.position.y = 0.6 + bayVal * 0.45;
-        hp.cyl.rotation.z = hp.side * (0.5 + bayVal * 0.35);
-    });
-    radiatorPanels.forEach(rp => { rp.pivot.rotation.z = rp.side * (1.0 - L('rad_deploy')) * 1.45; });
-
-    controlSurfaces.forEach(cs => {
-        if (cs.type === 'elevon') cs.mesh.rotation.x = Math.sin(now * 0.005) * 0.15 + (pitchDeg > 10 ? -0.25 : 0.05);
-        if (cs.type === 'rudder') cs.mesh.rotation.y = Math.cos(now * 0.004) * 0.2;
+    // 改良点③: ランディングギア展開
+    landingGears.forEach(lg => {
+        lg.scale.setScalar(Math.max(0.001, gearD));
     });
 
-    irisPaddles.forEach(ip => { ip.rotation.x = -0.35 + nozVal * 0.48; });
-    sealPaddles.forEach(sp => { sp.rotation.x = -0.35 + nozVal * 0.48; });
-    nozzlePistonLinks.forEach(nl => { nl.scale.set(1.0, 1.0, 0.6 + nozVal * 0.8); });
-
-    rcsJets.forEach(rj => { rj.mat.opacity = rcsBurst * 0.85; });
-
-    warpRingAssembly.position.y = -0.8 + L('ring_lift') * 4.2;
-
-    rotorClockwise.rotation.z += 0.04 + wCharge * 0.45;
-    rotorCounter.rotation.z -= 0.05 + wCharge * 0.55;
-
-    ringSegments.forEach(seg => {
-        const slideDist = seg.baseR + wCharge * 1.4;
-        seg.block.position.y = slideDist;
-        seg.coilCore.position.y = slideDist;
-        seg.coilCore.material.color.setHex(wCharge > 0.6 ? 0xffffff : cfg.aurora_hex);
-    });
-
-    rippleGeos.forEach((rip, rIdx) => {
-        if (wCharge > 0.2) {
-            rip.material.opacity = (wCharge * 0.8) * (1.0 - (elapsed * 2.0 + rIdx * 0.33) % 1.0);
-            rip.scale.setScalar(1.0 + ((elapsed * 2.5 + rIdx * 0.33) % 1.0) * 1.8);
-            rip.position.z = -(((elapsed * 18.0 + rIdx * 6.0) % 24.0));
-        } else {
-            rip.material.opacity = 0.0;
-        }
-    });
-
-    gravLensMat.uniforms.uAlpha.value = wLens;
-    accretionRing.material.opacity = wLens * 0.95;
-    accretionRing.rotation.z += 0.08;
-
+    // 改良点⑤: 六角形シールド発光＆小惑星迎撃
     if (f0.phase === "DEBRIS_RETRO_BRAKING") {
-        const fireState = (Math.sin(now * 0.06) > 0.3);
-        laserBeams.forEach(lb => { lb.material.opacity = fireState ? 0.95 : 0.0; });
-        debrisTargetGroup.visible = true;
-        targetBoxMesh.rotation.z += 0.05;
-        targetBoxMesh.material.color.setHex(fireState ? 0x10b981 : 0xf43f5e);
+        asteroidGroup.visible = true;
+        asteroidGroup.position.z = shipWorldPos.z - (prog - 0.74) * 800.0;
+        shieldMat.uniforms.uAlpha.value = THREE.MathUtils.lerp(shieldMat.uniforms.uAlpha.value, shieldHit > 0.1 ? 0.85 : 0.05, 0.1);
+        shieldMat.uniforms.uTime.value = now * 0.002;
     } else {
-        laserBeams.forEach(lb => { lb.material.opacity = 0.0; });
-        debrisTargetGroup.visible = false;
+        asteroidGroup.visible = false;
+        shieldMat.uniforms.uAlpha.value = 0.0;
     }
 
-    plumeRoot.visible = engPwr > 0.02;
-    if (plumeRoot.visible) {
-        const pulse = 0.95 + Math.sin(now * 0.08) * 0.05;
-        const atmoVacuumExpansion = THREE.MathUtils.clamp(altKm / 80.0, 0.0, 1.0);
-        const plumeExpansion = THREE.MathUtils.lerp(1.0, 3.8, atmoVacuumExpansion);
-        plumeRoot.scale.set(pulse * plumeExpansion, pulse * plumeExpansion, engPwr * (1.0 + vc * 1.5) * pulse);
-        plumeLight.intensity = engPwr * 4.5;
-        flareTexMat.opacity = engPwr * 0.85;
-        shockBarrels.forEach((sb, idx) => {
-            const bPulse = 1.0 + Math.sin(now * 0.12 + idx * 0.8) * 0.12;
-            sb.scale.set(bPulse, bPulse, 2.2 * bPulse);
-            sb.material.opacity = Math.max(0.1, 0.9 - atmoVacuumExpansion * 0.7);
-        });
-
-        pulseRings.forEach((pr, pIdx) => {
-            const pProg = (elapsed * 3.5 + pIdx * 0.16) % 1.0;
-            pr.position.z = -pProg * 38.0;
-            pr.scale.setScalar(1.0 + pProg * 2.8);
-            pr.material.opacity = (1.0 - pProg) * engPwr * 0.75;
-        });
+    // 改良点⑤: ワープ突入時の光彩反転＆無音バレットタイム
+    let duckingFactor = 1.0;
+    if (f0.phase === "WARP_FIELD_COMPRESSION" && prog > 0.14) {
+        warpPass.uniforms.uInvert.value = 1.0; // ネガポジ光彩反転
+        duckingFactor = 0.001; // 完全ミュート
     } else {
-        plumeLight.intensity = 0.0;
-        flareTexMat.opacity = 0.0;
-        pulseRings.forEach(pr => { pr.material.opacity = 0.0; });
+        warpPass.uniforms.uInvert.value = 0.0;
     }
 
+    // ワープエフェクト
+    warpPass.uniforms.uDistort.value = wBoom * 2.8 + wAct * 0.35;
+    warpPass.uniforms.uTime.value = now * 0.001;
     warpGroup.scale.setScalar(wAct > 0.05 ? 1.0 : 0.0001);
-    if (wAct > 0.05) {
-        warpGroup.rotation.z += 0.035;
-        ribbonTubes.forEach((tMesh, i) => {
-            tMesh.material.opacity = (0.75 + Math.sin(elapsed * 4.0 + i) * 0.2) * wAct;
-        });
 
-        const sArr = starGeo.attributes.position.array;
-        const stretchLen = 35.0 + vc * 180.0;
-        for (let i = 0; i < starCount; i++) {
-            let z = sArr[i * 6 + 2] - (18.0 + vc * 45.0);
-            if (z < -300.0) z = 300.0;
-            sArr[i * 6 + 2] = z;
-            sArr[i * 6 + 5] = z + stretchLen;
-        }
-        starGeo.attributes.position.needsUpdate = true;
-    }
-
-    if (prog > 0.20) {
-        const approachProg = THREE.MathUtils.clamp((prog - 0.20) / 0.80, 0.0, 1.0);
-        const curDist = THREE.MathUtils.lerp(650000.0, 12.0, Math.pow(approachProg, 2.5));
-        const curScale = THREE.MathUtils.lerp(0.002, 1.0, Math.pow(approachProg, 2.0));
-        destWorld.position.set(0, 0, curDist);
-        destWorld.scale.setScalar(curScale);
-        gateFieldMesh.material.opacity = 0.35 + Math.sin(now * 0.008) * 0.25;
+    // 目標惑星・着陸基地への接近
+    if (prog > 0.40) {
+        const approachProg = THREE.MathUtils.clamp((prog - 0.40) / 0.60, 0.0, 1.0);
+        destWorld.position.set(0, THREE.MathUtils.lerp(-1500, 0, Math.pow(approachProg, 2.0)), THREE.MathUtils.lerp(600000.0, 0.0, Math.pow(approachProg, 2.5)));
+        destWorld.scale.setScalar(THREE.MathUtils.lerp(0.002, 1.0, Math.pow(approachProg, 2.0)));
     } else {
         destWorld.position.set(0, 0, 800000.0);
         destWorld.scale.setScalar(0.0001);
     }
 
-    tetherMat.opacity = tLock * 0.85;
-    if (tLock > 0.01) {
-        for (let k = 0; k < 6; k++) {
-            const ang = (k / 6) * Math.PI * 2;
-            const gateP = new THREE.Vector3(Math.cos(ang) * 65.0, Math.sin(ang) * 65.0, 0);
-            const shipAttach = new THREE.Vector3((k % 2 === 0 ? 3 : -3), 0, -5.0).applyMatrix4(shipMeshGroup.matrixWorld);
-            const localShipP = destWorld.worldToLocal(shipAttach.clone());
-            const posAttr = tetherLines[k].geometry.attributes.position;
-            posAttr.setXYZ(0, gateP.x, gateP.y, gateP.z);
-            posAttr.setXYZ(1, localShipP.x, localShipP.y, localShipP.z);
-            posAttr.needsUpdate = true;
-        }
-    }
-
-    let duckingFactor = 1.0;
-    if (f0.phase === "WARP_FIELD_COMPRESSION" && prog > 0.09) {
-        duckingFactor = Math.max(0.001, 1.0 - (prog - 0.09) / 0.03);
-    }
-
+    // 音声ボリューム調整
     if (actx) {
-        const inAtmo = (altKm < 95.0);
-        rocketFilter.frequency.setTargetAtTime(inAtmo ? 340 : 55, actx.currentTime, 0.1);
-        rocketGain.gain.setTargetAtTime(engPwr * (inAtmo ? 0.42 : 0.12) * duckingFactor, actx.currentTime, 0.08);
-        rcsGain.gain.setTargetAtTime(rcsBurst * 0.18 * duckingFactor, actx.currentTime, 0.04);
-        coilGain.gain.setTargetAtTime((f0.phase.includes("COIL") || f0.phase.includes("RAIL") ? 0.22 : 0.0001) * duckingFactor, actx.currentTime, 0.08);
-        warpGain.gain.setTargetAtTime((wAct * 0.38 + wLens * 0.25) * duckingFactor, actx.currentTime, 0.1);
-        warpOsc.frequency.setTargetAtTime(60 + vc * 380, actx.currentTime, 0.1);
+        rocketGain.gain.setTargetAtTime(engPwr * 0.35 * duckingFactor, actx.currentTime, 0.05);
+        rcsGain.gain.setTargetAtTime(rcsBurst * 0.15 * duckingFactor, actx.currentTime, 0.05);
     }
 
-    // CAM 02（機体＋天体ツーショットフレーミング）
-    const recessionKms = vc > 0.01 ? (vc * 299792).toFixed(0) : (mach * 0.34).toFixed(1);
-
-    if (f0.phase.includes("STANDBY") || f0.phase.includes("CHARGE")) {
-        pipTitleEl.innerText = "CAM 02: LAUNCH RAIL FLY-BY TRACKER";
-        pipMetricEl.innerText = `RECESSION: 0 km/s | MACH: ${mach.toFixed(1)} | PAD LOCK`;
-        cameraPip.position.set(28.0, 4.0, -14.0);
-        cameraPip.lookAt(0, 1.0, 0);
-    } else if (f0.phase === "CATAPULT_RAIL_ACCEL") {
-        pipTitleEl.innerText = "CAM 02: CATAPULT SUPERSONIC FLY-BY";
-        pipMetricEl.innerText = `RECESSION: ${recessionKms} km/s | MACH: ${mach.toFixed(1)} | RAIL EXIT`;
-        cameraPip.position.set(22.0, 3.0, 35.0 - distM * 0.04);
-        cameraPip.lookAt(0, 0, 0);
-    } else if (f0.phase.includes("CLIMB") || f0.phase.includes("INSERTION")) {
-        pipTitleEl.innerText = "CAM 02: ONBOARD WING-MOUNT & EARTH DEPARTURE";
-        pipMetricEl.innerText = `EARTH RECESSION: ${recessionKms} km/s | ALT: ${altKm.toFixed(0)} km`;
-        cameraPip.position.set(8.5, 3.2, 18.0);
-        cameraPip.lookAt(0, 0, -2000.0);
-    } else if (f0.phase.includes("WARP")) {
-        if (prog >= 0.30 && prog <= 0.48) {
-            pipTitleEl.innerText = "CAM 02: MARS FLY-BY OPTICAL INTERCEPT";
-            pipMetricEl.innerText = `VEL: ${vc.toFixed(3)} c | INTERCEPT TARGET: MARS`;
-            cameraPip.position.set(-16.0, 5.0, -22.0);
-            cameraPip.lookAt(marsFlyby.position.x * 0.1, marsFlyby.position.y * 0.1, marsFlyby.position.z * 0.5);
-        } else if (prog >= 0.60 && prog <= 0.78) {
-            pipTitleEl.innerText = "CAM 02: JUPITER GRAVITY PASS";
-            pipMetricEl.innerText = `VEL: ${vc.toFixed(3)} c | INTERCEPT: GREAT RED SPOT`;
-            cameraPip.position.set(18.0, 6.0, -22.0);
-            cameraPip.lookAt(jupiterFlyby.position.x * 0.1, jupiterFlyby.position.y * 0.1, jupiterFlyby.position.z * 0.5);
-        } else {
-            pipTitleEl.innerText = "CAM 02: ALCUBIERRE WARP FIELD BOW SHOCK";
-            pipMetricEl.innerText = `WARP: ${vc.toFixed(3)} c (${recessionKms} km/s) | LORENTZ: ${(1.0/Math.sqrt(Math.max(0.001,1.0-vc*vc))).toFixed(2)}x`;
-            cameraPip.position.set(-8.5, 3.5, 22.0);
-            cameraPip.lookAt(0, 0, -5.0);
-        }
-    } else {
-        pipTitleEl.innerText = "CAM 02: STARGATE APPROACH & ARREST LOCK";
-        pipMetricEl.innerText = `APPROACH: ${recessionKms} km/s | TETHER CAPTURE READY`;
-        cameraPip.position.set(0.0, 6.5, -28.0);
-        cameraPip.lookAt(0, 0, 150.0);
-    }
+    // サブモニター (CAM 02)
+    cameraPip.position.set(shipWorldPos.x - 22.0, shipWorldPos.y + 12.0, shipWorldPos.z - 35.0);
+    cameraPip.lookAt(shipWorldPos);
 
     drawRadar(prog, vc, mach, altKm);
 
-    // ★修正: ループ先頭でビューポート＆シザーを初期化してメイン画面を確実にフルスクリーン描画
+    // 画面クリア＆レンダリング
     renderer.autoClear = true;
     renderer.setRenderTarget(null);
     renderer.setViewport(0, 0, W, H);
@@ -2785,12 +1660,11 @@ function animate(now) {
         renderer.autoClear = false;
         renderer.clearDepth();
         renderer.render(scene, cameraPip);
-
-        // ★修正: 次フレームのメイン描画が暗転・縮小しないよう即座にリセット
         renderer.setScissorTest(false);
         renderer.setViewport(0, 0, W, H);
     }
 
+    // 2D HUD更新
     document.getElementById('ui-phase').innerText = f0.phase;
     document.getElementById('ui-alt').innerText = altKm > 90000 ? "DEEP SPACE" : `${altKm.toFixed(1)} km`;
     document.getElementById('ui-spd').innerText = vc > 0.02 ? `${vc.toFixed(3)} c` : `M ${mach.toFixed(1)}`;
@@ -2803,7 +1677,7 @@ function animate(now) {
     document.getElementById('ui-gamma').innerText = gamma.toFixed(2);
     document.getElementById('ui-prog').innerText = (prog * 100).toFixed(1);
 
-    if (f0.phase === "STARGATE_DOCKING_LOCKED") {
+    if (f0.phase.includes("TOUCHDOWN")) {
         document.getElementById('complete-banner').style.display = 'block';
     }
 }
