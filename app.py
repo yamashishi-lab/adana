@@ -11,8 +11,8 @@ st.set_page_config(
 
 st.title("🛸 Hyper-Drive Architect: Apex VFX Cinema Edition")
 st.caption(
-    "※ 完全映画仕様ディレクターズカット：PMREM IBL / フォトリアルFBM地球＆都市夜景 / シーケンシャル誘導灯メガフロート / "
-    "CAM 02機体＋天体追跡フレーミング / 2段軌道レーダーUI / 自動起動シンセ＆AIボイス / 超濃縮ワープシネマテンポ"
+    "※ 完全映画仕様ディレクターズカット：PMREM IBL / 実写NASAテクスチャ地球＆宇宙 / 全天球リアル星空 / "
+    "滑らか航空力学的アプローチ / 巨大コロニー＆無限滑走路 / 物理ベースシャドウ＆大気膨張プルーム"
 )
 
 # =========================================================================
@@ -41,8 +41,8 @@ VESSEL_DESIGNS = {
 
 ARMOR_SYSTEMS = {
     "漆黒カーボンナノチューブ電波吸収装甲 (RAM Stealth)": {
-        "metalness": 0.65,
-        "roughness": 0.38,
+        "metalness": 0.85,
+        "roughness": 0.28,
         "plasma_hex": 0xD946EF,
     },
     "液体金属クローム・電磁ミラー装甲 (Mirror Electrum)": {
@@ -82,27 +82,27 @@ DESTINATIONS = {
     "土星リング 氷冠スターゲート『クロノス』": {
         "dist_label": "9.58 AU (1,433,000,000 km)",
         "type": "saturn",
-        "color_hex": 0xE2CCB2,
-        "band_hex": 0xB89F80,
+        "color_hex": 0x3a3227,
+        "band_hex": 0x241e17,
     },
     "木星 大赤斑上空・軌道エレベーターアンカー『ゼウス』": {
         "dist_label": "4.20 AU (628,000,000 km)",
         "type": "jupiter",
-        "color_hex": 0xD97706,
-        "band_hex": 0x92400E,
+        "color_hex": 0x382110,
+        "band_hex": 0x221309,
     },
     "火星 オリンポス軌道テラフォーミング・リング": {
         "dist_label": "0.52 AU (78,000,000 km)",
         "type": "mars",
-        "color_hex": 0xC2410C,
-        "band_hex": 0x7C2D12,
+        "color_hex": 0x3b1c10,
+        "band_hex": 0x231008,
     },
 }
 
 LAUNCH_ENVIRONMENTS = {
     "相模湾 第1メガフロート射場 (深夜・大気光霧＆サーチライト照射)": {
         "mode": "night",
-        "angle_deg": 12.0,  # 緩やかでリアルなカタパルト傾斜角度
+        "angle_deg": 12.0,
         "sun_pos": [-180, 110, -260],
         "sun_color": 0x93C5FD,
         "sun_int": 2.8,
@@ -141,8 +141,8 @@ with tab1:
         vessel_cfg = VESSEL_DESIGNS[vessel_sel]
         armor_sel = st.selectbox("外装マテリアルPBR設定", list(ARMOR_SYSTEMS.keys()))
         armor_cfg = ARMOR_SYSTEMS[armor_sel]
-        hull_color = st.color_picker("メイン装甲ベースカラー", "#1e293b")
-        belly_color = st.color_picker("下部耐熱カーボンタイル配色", "#0b0f19")
+        hull_color = st.color_picker("メイン装甲ベースカラー", "#111827")
+        belly_color = st.color_picker("下部耐熱カーボンタイル配色", "#030712")
     with c2:
         st.info(f"**構造設計:** {vessel_cfg['desc']}")
         wings_span = st.slider("可変ジオメトリ主翼スパン (m)", 18.0, 42.0, 30.0, step=1.0)
@@ -213,7 +213,7 @@ def build_timeline(preview_only=False):
     frames = []
     exit_mach = float(vessel_cfg["catapult_mach"] * (coil_charge / 100.0))
 
-    # T-5秒〜0秒: 発射前待機・リニアコイル超伝導励磁（機体はレール傾斜角と完全合致）
+    # T-5秒〜0秒: 発射前待機
     for step in range(20):
         t = -5.0 + step * dt
         eng_pre = float(np.clip((t + 1.8) / 1.8, 0.0, 0.7))
@@ -252,7 +252,7 @@ def build_timeline(preview_only=False):
     ring_l = 0.0
     rad_d = 0.0
 
-    total_steps = 440  # 約110秒の重厚なシネマティック尺
+    total_steps = 440
     for step in range(total_steps):
         t = step * dt
         rad_pitch = np.radians(base_pitch)
@@ -285,10 +285,10 @@ def build_timeline(preview_only=False):
             if 0.85 <= mach <= 2.4:
                 vapor = float(1.0 - abs(mach - 1.6) / 0.8)
             vib = 0.28 + vapor * 0.35
-            # レール走行中はレール角度と完全一致、末端10.5秒以降滑らかにピッチアップ開始
+            # レール上はレール角12度、末端で空気力学的にごくわずかな迎え角（+1.5度）のみ付加
             if t > 10.5:
                 pitch_blend = (t - 10.5) / 1.5
-                pitch_cur = base_pitch + (20.0 - base_pitch) * (pitch_blend**2)
+                pitch_cur = base_pitch + 1.5 * (pitch_blend**1.5)
             else:
                 pitch_cur = base_pitch
 
@@ -299,14 +299,14 @@ def build_timeline(preview_only=False):
             speed_ms = mach * 340.0
             dist_m += speed_ms * dt * 0.55
             space_f = float(np.clip((alt_km - 10.0) / 85.0, 0.0, 1.0))
-            # 離陸後は20度から宇宙空間に向けて滑らかに水平（8度）へ遷移
-            pitch_cur = 20.0 * (1.0 - space_f * 0.6)
+            # 空気抵抗を最小化する極超音速リフティング軌道（13.5度から宇宙で水平0度へ）
+            pitch_cur = 13.5 * (1.0 - space_f * 0.8)
             alt_km += (speed_ms * np.sin(np.radians(pitch_cur)) * dt) / 1000.0
             g_load = 5.2
             eng_pwr = 1.0
             nozzle = 1.0
             wing_sw = 1.0
-            roll_deg = np.sin(t * 0.6) * 6.0
+            roll_deg = np.sin(t * 0.6) * 4.0
             if 12.0 <= alt_km <= 80.0:
                 plasma = float(np.sin(((alt_km - 12.0) / 68.0) * np.pi) ** 0.75)
             vib = plasma * 0.45 + 0.12
@@ -314,7 +314,7 @@ def build_timeline(preview_only=False):
         elif progress < 0.16:
             phase = "WARP_FIELD_COMPRESSION"
             alt_km = 120.0 + (progress / 0.16) * 280.0
-            pitch_cur = max(0.0, 8.0 * (1.0 - progress / 0.16))
+            pitch_cur = max(0.0, 4.0 * (1.0 - progress / 0.16))
             eng_pwr = 0.7
             nozzle = 0.8
             g_load = 1.8
@@ -352,16 +352,16 @@ def build_timeline(preview_only=False):
             g_load = 1.2
             vib = 0.06
             progress += (0.010 + vc * 0.024) * dt
-            roll_deg = np.sin(t * 0.25) * 3.5
+            roll_deg = np.sin(t * 0.25) * 2.5
             if progress >= 0.66:
                 w_boom = 1.0
 
         elif progress < 0.80:
             phase = "DEBRIS_AERO_BRAKING"
             alt_km = 99999.0
-            pitch_cur = 4.0
+            pitch_cur = 2.5
             yaw_deg = 0.0
-            roll_deg = np.sin(t * 1.0) * 5.0
+            roll_deg = np.sin(t * 1.0) * 3.0
             speedbrake = 1.0
             bay_o = 0.5
             ring_l = 0.2
@@ -375,39 +375,42 @@ def build_timeline(preview_only=False):
             progress += 0.014 * dt
             shield = float(np.sin(t * 6.0) ** 2) if 0.72 < progress < 0.78 else 0.0
 
-        elif progress < 0.90:
+        elif progress < 0.92:
             phase = "ATMOSPHERIC_ENTRY_GLIDESLOPE"
-            descent_p = (progress - 0.80) / 0.10
-            alt_km = float(np.clip(120.0 * (1.0 - descent_p), 1.5, 120.0))
-            mach = float(max(1.5, 15.0 * (1.0 - descent_p)))
+            descent_p = (progress - 0.80) / 0.12
+            # 航空機のような3度〜5度の緩やかな滑空パス（120kmから1.8kmへ滑らかにアプローチ）
+            alt_km = float(np.clip(120.0 * (1.0 - (descent_p**1.3)), 1.8, 120.0))
+            mach = float(max(1.8, 18.0 * (1.0 - descent_p)))
             vc = 0.0
-            pitch_cur = 8.0 * (1.0 - descent_p) - 1.5 * descent_p
-            roll_deg = np.sin(descent_p * np.pi * 3.0) * 6.0
-            plasma = float(np.sin(descent_p * np.pi) ** 1.2) if descent_p < 0.6 else 0.0
-            vapor = float(np.sin(descent_p * np.pi) ** 1.5) if descent_p >= 0.5 else 0.0
-            g_load = 4.0 * (1.0 - descent_p * 0.5)
-            eng_pwr = 0.4
-            nozzle = 0.6
+            pitch_cur = -3.5 * (1.0 - descent_p)
+            roll_deg = np.sin(descent_p * np.pi * 2.0) * 4.0
+            plasma = float(np.sin(descent_p * np.pi) ** 1.2) if descent_p < 0.65 else 0.0
+            vapor = float(np.sin(descent_p * np.pi) ** 1.5) if descent_p >= 0.55 else 0.0
+            g_load = 3.5 * (1.0 - descent_p * 0.5)
+            eng_pwr = 0.35
+            nozzle = 0.5
             bay_o = 0.0
             ring_l = 0.0
             rad_d = 0.0
-            wing_sw = 0.1
-            speedbrake = 0.8
-            vib = plasma * 0.5 + 0.15
+            wing_sw = 0.15
+            speedbrake = 0.85
+            runway_spd = float(280.0 * (1.0 - descent_p * 0.3))
+            vib = plasma * 0.4 + 0.12
             progress += 0.011 * dt
 
-        elif progress < 0.96:
+        elif progress < 0.965:
             phase = "FINAL_APPROACH_FLARE"
-            flare_p = (progress - 0.90) / 0.06
-            alt_km = float(max(0.0, 1.5 * (1.0 - flare_p)))
-            mach = float(max(0.35, 1.5 * (1.0 - flare_p)))
+            flare_p = (progress - 0.92) / 0.045
+            alt_km = float(max(0.0, 1.8 * (1.0 - flare_p)))
+            mach = float(max(0.32, 1.8 * (1.0 - flare_p)))
             vc = 0.0
-            pitch_cur = -2.0 * (1.0 - flare_p) + 5.5 * flare_p  # 正確なフレア引き起こし
-            roll_deg = np.sin(flare_p * np.pi * 2.0) * 2.0
-            gear_d = float(np.clip(flare_p * 2.0, 0.0, 1.0))
+            # 飛行機通りの自然なフレア引き起こし（-3度から+3.5度へ）
+            pitch_cur = -3.0 * (1.0 - flare_p) + 3.5 * flare_p
+            roll_deg = np.sin(flare_p * np.pi) * 1.5
+            gear_d = float(np.clip(flare_p * 2.2, 0.0, 1.0))
             speedbrake = 1.0
-            runway_spd = 135.0 * (1.0 - flare_p * 0.1)
-            g_load = 1.4
+            runway_spd = 195.0 * (1.0 - flare_p * 0.2)
+            g_load = 1.3
             eng_pwr = 0.15
             nozzle = 0.3
             vib = 0.08
@@ -415,21 +418,21 @@ def build_timeline(preview_only=False):
 
         else:
             phase = "TOUCHDOWN_ROLLOUT_STOP"
-            rollout_p = (progress - 0.96) / 0.04
+            rollout_p = (progress - 0.965) / 0.035
             alt_km = 0.0
-            mach = float(max(0.0, 0.35 * (1.0 - rollout_p)))
+            mach = float(max(0.0, 0.32 * (1.0 - rollout_p)))
             vc = 0.0
-            pitch_cur = max(0.0, 5.5 * (1.0 - rollout_p * 2.5))
+            pitch_cur = max(0.0, 3.5 * (1.0 - rollout_p * 2.0))
             roll_deg = 0.0
             gear_d = 1.0
             speedbrake = 1.0
-            chute_d = float(np.clip(rollout_p * 3.0, 0.0, 1.0))
-            runway_spd = float(max(0.0, 120.0 * (1.0 - rollout_p)))
+            chute_d = float(np.clip(rollout_p * 3.5, 0.0, 1.0))
+            runway_spd = float(max(0.0, 155.0 * (1.0 - rollout_p)))
             td_smoke = float(np.clip((1.0 - rollout_p) * 2.0, 0.0, 1.0))
-            g_load = 1.0 + float(np.sin(rollout_p * np.pi)) * 0.6
+            g_load = 1.0 + float(np.sin(rollout_p * np.pi)) * 0.5
             eng_pwr = 0.0
             nozzle = 0.2
-            vib = 0.18 * (1.0 - rollout_p)
+            vib = 0.15 * (1.0 - rollout_p)
             progress = min(1.0, progress + 0.006 * dt)
 
         gamma = 1.0 / np.sqrt(max(0.001, 1.0 - (min(0.999, vc) ** 2)))
@@ -509,7 +512,7 @@ sim_config = {
 }
 
 # =========================================================================
-# 📺 Three.js 完全映画仕様・全修正＆超魔改造統合版
+# 📺 Three.js 完全映画仕様・実写NASAアセット＆物理光学VFX版
 # =========================================================================
 html_code = """<!DOCTYPE html>
 <html>
@@ -519,7 +522,7 @@ html_code = """<!DOCTYPE html>
 *{box-sizing:border-box;}
 body,html{
   margin:0;padding:0;width:100%;height:100%;overflow:hidden;
-  background:#010308;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  background:#000205;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
   color:#f8fafc;user-select:none;
 }
 #webgl-canvas{
@@ -634,11 +637,11 @@ body,html{
 <div id="ils-hud">
   <div style="display:flex;justify-content:space-between;">
     <span>ILS RUNWAY 04L</span>
-    <span>GS: 3.0° LOCKED</span>
+    <span>GS: 3.5° LOCKED</span>
   </div>
   <div class="ils-cross"></div>
   <div style="display:flex;justify-content:space-between;">
-    <span id="ils-dist">ALT: 1,500 M</span>
+    <span id="ils-dist">ALT: 1,800 M</span>
     <span id="ils-callout">LOCALIZER NOMINAL</span>
   </div>
 </div>
@@ -699,13 +702,13 @@ window.switchCamMode = function(mode) {
 };
 
 // =========================================================================
-// 1. レンダラー＆大気圏マルチストップ散乱空＆宇宙全天球星空
+// 1. レンダラー＆PMREM IBL＆大気圏マルチストップ散乱空＆全天球リアル星空
 // =========================================================================
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(W, H);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;
+renderer.toneMappingExposure = 1.15;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -713,15 +716,26 @@ const scene = new THREE.Scene();
 const baseFogColor = new THREE.Color(cfg.env.fog_color);
 scene.fog = new THREE.FogExp2(baseFogColor, cfg.env.fog_density);
 
-const cameraMain = new THREE.PerspectiveCamera(55, W / H, 0.5, 980000);
+// PMREM IBL 生成
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+const envScene = new THREE.Scene();
+envScene.add(new THREE.HemisphereLight(0xdbeafe, 0x030712, 2.5));
+const dirFill = new THREE.DirectionalLight(0xffeedd, 3.0);
+dirFill.position.set(100, 150, 100);
+envScene.add(dirFill);
+const generatedEnvMap = pmremGenerator.fromScene(envScene).texture;
+scene.environment = generatedEnvMap;
 
-let baseCamPos = new THREE.Vector3(-35.0, 16.0, -95.0);
-let baseTarget = new THREE.Vector3(0.0, 1.5, -4.0);
+const cameraMain = new THREE.PerspectiveCamera(52, W / H, 0.5, 980000);
+
+let baseCamPos = new THREE.Vector3(-32.0, 14.0, -85.0);
+let baseTarget = new THREE.Vector3(0.0, 1.2, -4.0);
 
 if (cfg.cam_preset.includes("エクストラ")) {
-    baseCamPos.set(-52.0, 24.0, -135.0);
+    baseCamPos.set(-48.0, 22.0, -125.0);
 } else if (cfg.cam_preset.includes("チェイス")) {
-    baseCamPos.set(-26.0, 11.0, -75.0);
+    baseCamPos.set(-24.0, 9.5, -65.0);
 }
 cameraMain.position.copy(baseCamPos);
 cameraMain.lookAt(baseTarget);
@@ -731,7 +745,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.enabled = false;
 
-// 大気散乱マルチストップ・スカイドーム
+// 大気散乱スカイドーム
 const atmoSkyGeo = new THREE.SphereGeometry(180000, 32, 16);
 const atmoSkyMat = new THREE.ShaderMaterial({
     vertexShader: `varying vec3 vWorldPos; void main() { vec4 wp = modelMatrix * vec4(position, 1.0); vWorldPos = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }`,
@@ -742,11 +756,11 @@ const atmoSkyMat = new THREE.ShaderMaterial({
             vec3 dir = normalize(vWorldPos);
             float h = clamp(dir.y, -0.2, 1.0);
             float curve = pow(max(0.0, h + 0.2) / 1.2, 0.45);
-            vec3 midSky = mix(uHorizon, uZenith, 0.5) + vec3(0.04, 0.08, 0.15);
+            vec3 midSky = mix(uHorizon, uZenith, 0.5) + vec3(0.03, 0.06, 0.12);
             vec3 sky = (curve < 0.5) ? mix(uHorizon, midSky, curve * 2.0) : mix(midSky, uZenith, (curve - 0.5) * 2.0);
-            float sunHalo = pow(max(0.0, dot(dir, uSunDir)), 12.0) * 0.45;
+            float sunHalo = pow(max(0.0, dot(dir, uSunDir)), 14.0) * 0.45;
             sky += vec3(1.0, 0.75, 0.45) * sunHalo;
-            sky = mix(sky, vec3(0.003, 0.008, 0.02), uSpaceFade);
+            sky = mix(sky, vec3(0.001, 0.003, 0.008), uSpaceFade);
             gl_FragColor = vec4(sky, 1.0);
         }
     `,
@@ -761,11 +775,12 @@ const atmoSkyMat = new THREE.ShaderMaterial({
 const atmoSkyDome = new THREE.Mesh(atmoSkyGeo, atmoSkyMat);
 scene.add(atmoSkyDome);
 
+// 全天球リアル星空（fog: false でフォグ消滅を解消）
 const spaceFieldGroup = new THREE.Group();
 spaceFieldGroup.visible = false;
 scene.add(spaceFieldGroup);
 
-function createStarField(count, radiusMin, radiusMax, size, baseColor) {
+function createRealStarField(count, radiusMin, radiusMax, size, baseColor) {
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
@@ -777,46 +792,67 @@ function createStarField(count, radiusMin, radiusMax, size, baseColor) {
         pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
         pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         pos[i * 3 + 2] = r * Math.cos(phi);
-        const variation = 0.7 + Math.random() * 0.6;
-        col[i * 3] = c.r * variation; col[i * 3 + 1] = c.g * variation; col[i * 3 + 2] = c.b * variation;
+        const lum = 0.5 + Math.random() * 0.5;
+        col[i * 3] = c.r * lum; col[i * 3 + 1] = c.g * lum; col[i * 3 + 2] = c.b * lum;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    return new THREE.Points(geo, new THREE.PointsMaterial({ size: size, vertexColors: true, transparent: true, opacity: 0.95, sizeAttenuation: false }));
+    return new THREE.Points(geo, new THREE.PointsMaterial({
+        size: size, vertexColors: true, transparent: true, opacity: 0.95,
+        sizeAttenuation: false, fog: false
+    }));
 }
-spaceFieldGroup.add(createStarField(6000, 75000, 150000, 1.8, 0xdbeafe));
-spaceFieldGroup.add(createStarField(4000, 65000, 120000, 2.4, 0x38bdf8));
-spaceFieldGroup.add(createStarField(5000, 55000, 110000, 1.4, 0xf472b6));
+spaceFieldGroup.add(createRealStarField(12000, 80000, 160000, 1.2, 0xdbeafe));
+spaceFieldGroup.add(createRealStarField(7000, 70000, 140000, 1.8, 0x93c5fd));
+spaceFieldGroup.add(createRealStarField(9000, 60000, 130000, 2.2, 0xfbcfe8));
 
+// 太陽光（広角シャドウカメラ最適化）
 const sunLight = new THREE.DirectionalLight(cfg.env.sun_color, cfg.env.sun_int);
 sunLight.position.set(cfg.env.sun_pos[0] * 0.15, cfg.env.sun_pos[1] * 0.15 + 40.0, cfg.env.sun_pos[2] * 0.15);
 sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 1200;
+sunLight.shadow.camera.left = -60;
+sunLight.shadow.camera.right = 60;
+sunLight.shadow.camera.top = 60;
+sunLight.shadow.camera.bottom = -60;
 scene.add(sunLight);
-scene.add(new THREE.HemisphereLight(0x93c5fd, 0x0f172a, 1.8));
+scene.add(new THREE.HemisphereLight(0x93c5fd, 0x030712, 1.4));
 
-const WarpDistortionShader = {
-    uniforms: { "tDiffuse": { value: null }, "uDistort": { value: 0.0 }, "uInvert": { value: 0.0 }, "uTime": { value: 0.0 } },
+// ポストプロセス：フィルムグレイン＆色収差
+const FilmCinemaShader = {
+    uniforms: {
+        "tDiffuse": { value: null },
+        "uDistort": { value: 0.0 },
+        "uInvert": { value: 0.0 },
+        "uTime": { value: 0.0 }
+    },
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `
         uniform sampler2D tDiffuse; uniform float uDistort; uniform float uInvert; uniform float uTime; varying vec2 vUv;
         void main() {
             vec2 center = vec2(0.5, 0.5); vec2 dir = vUv - center; float dist = length(dir);
-            float ringDistort = sin(dist * 18.0 - uTime * 4.0) * exp(-dist * 3.5) * uDistort * 0.05;
-            vec2 rUv = vUv + dir * (dist * uDistort * 0.09 + ringDistort);
+            float ca = 0.0018 + uDistort * 0.04;
+            vec2 rUv = vUv + dir * (ca + uDistort * 0.08);
             vec2 gUv = vUv;
-            vec2 bUv = vUv - dir * (dist * uDistort * 0.09 + ringDistort);
+            vec2 bUv = vUv - dir * (ca + uDistort * 0.08);
             vec3 col = vec3(texture2D(tDiffuse, rUv).r, texture2D(tDiffuse, gUv).g, texture2D(tDiffuse, bUv).b);
             if (uInvert > 0.01) col = mix(col, vec3(1.0) - col, uInvert);
-            gl_FragColor = vec4(col * smoothstep(0.85, 0.25, dist), 1.0);
+            // フィルムグレインノイズ
+            float grain = fract(sin(dot(vUv * (uTime * 0.1 + 1.0), vec2(12.9898, 78.233))) * 43758.5453) * 0.035;
+            col += grain;
+            gl_FragColor = vec4(col * smoothstep(0.95, 0.35, dist), 1.0);
         }
     `
 };
 
 const composerMain = new THREE.EffectComposer(renderer);
 composerMain.addPass(new THREE.RenderPass(scene, cameraMain));
-composerMain.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(W, H), 1.35, 0.45, 0.80));
-const warpPass = new THREE.ShaderPass(WarpDistortionShader);
-composerMain.addPass(warpPass);
+composerMain.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(W, H), 0.85, 0.35, 0.85));
+const filmPass = new THREE.ShaderPass(FilmCinemaShader);
+composerMain.addPass(filmPass);
 
 const radarCanvas = document.getElementById('radar-canvas');
 const rCtx = radarCanvas.getContext('2d');
@@ -827,7 +863,7 @@ function updateCameraAspect() {
     renderer.setSize(W, H);
     composerMain.setSize(W, H);
     cameraMain.aspect = W / H;
-    cameraMain.fov = (W / H < 1.0) ? 68.0 : 55.0;
+    cameraMain.fov = (W / H < 1.0) ? 65.0 : 52.0;
     cameraMain.updateProjectionMatrix();
     radarCanvas.width = radarCanvas.clientWidth * 1.5;
     radarCanvas.height = radarCanvas.clientHeight * 1.5;
@@ -918,49 +954,62 @@ function initAudioSystem() {
 window.addEventListener('pointerdown', () => { if (actx && actx.state === 'suspended') actx.resume(); }, { once: true });
 
 // =========================================================================
-// 3. 5層コンポジットマテリアル＆PBRテクスチャ
+// 3. 高密度実写PBRテクスチャ＆NASA実写アセットローダー
 // =========================================================================
+const texLoader = new THREE.TextureLoader();
+texLoader.setCrossOrigin('anonymous');
+
+const earthDayTex = texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
+const earthCloudsTex = texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png');
+const moonCraterTex = texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg');
+
 function makeMasterPbrTexture() {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#475569'; ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillStyle = '#2d3748'; ctx.fillRect(0, 0, 1024, 1024);
 
-    for (let x = 0; x < 1024; x += 64) {
-        for (let y = 0; y < 1024; y += 32) {
-            const v = 85 + Math.floor(Math.random() * 55);
-            ctx.fillStyle = `rgb(${v},${v+3},${v+8})`;
-            ctx.fillRect(x + 2, y + 2, 60, 28);
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(x + 6, y + 6, 2, 2); ctx.fillRect(x + 54, y + 6, 2, 2);
-            ctx.fillRect(x + 6, y + 22, 2, 2); ctx.fillRect(x + 54, y + 22, 2, 2);
-            if (Math.random() > 0.6) {
-                ctx.fillStyle = 'rgba(15,23,42,0.35)'; ctx.fillRect(x + 2, y + 24, 60, 6);
-            }
+    for (let x = 0; x < 1024; x += 32) {
+        for (let y = 0; y < 1024; y += 16) {
+            const v = 35 + Math.floor(Math.random() * 25);
+            ctx.fillStyle = `rgb(${v},${v+2},${v+5})`;
+            ctx.fillRect(x + 1, y + 1, 30, 14);
+            ctx.fillStyle = '#080c14';
+            ctx.fillRect(x + 2, y + 2, 1.5, 1.5); ctx.fillRect(x + 28, y + 2, 1.5, 1.5);
         }
     }
-    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5;
-    for (let x = 0; x <= 1024; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke(); }
-    for (let y = 0; y <= 1024; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5;
+    for (let x = 0; x <= 1024; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke(); }
+    for (let y = 0; y <= 1024; y += 16) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
 
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 4);
+    tex.repeat.set(8, 8);
     return tex;
 }
 const masterHullTex = makeMasterPbrTexture();
 
-const matHull = new THREE.MeshPhysicalMaterial({ color: cfg.hull_color, metalness: cfg.metalness, roughness: cfg.roughness, bumpMap: masterHullTex, bumpScale: 0.05, clearcoat: 0.8 });
-const matBellyTile = new THREE.MeshStandardMaterial({ color: cfg.belly_color, metalness: 0.35, roughness: 0.75, bumpMap: masterHullTex, bumpScale: 0.06 });
-const matTitaniumFrame = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.92, roughness: 0.20 });
-const matPistonRod = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.98, roughness: 0.05 });
-const matDarkAlloy = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.22 });
-const matGoldMLI = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.96, roughness: 0.20 });
-const matCopperCoil = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.95, roughness: 0.15 });
-const matCanopy = new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, metalness: 0.95, roughness: 0.03, transparent: true, opacity: 0.45 });
-const matCryoPipe = new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.65, metalness: 0.25 });
+const matHull = new THREE.MeshStandardMaterial({
+    color: cfg.hull_color, metalness: cfg.metalness, roughness: cfg.roughness,
+    bumpMap: masterHullTex, bumpScale: 0.035, envMapIntensity: 2.2
+});
+const matBellyTile = new THREE.MeshStandardMaterial({
+    color: cfg.belly_color, metalness: 0.25, roughness: 0.85,
+    bumpMap: masterHullTex, bumpScale: 0.05, envMapIntensity: 1.2
+});
+const matTitaniumFrame = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.95, roughness: 0.18, envMapIntensity: 2.0 });
+const matPistonRod = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.98, roughness: 0.04 });
+const matDarkAlloy = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.92, roughness: 0.25, envMapIntensity: 1.5 });
+const matGoldMLI = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.95, roughness: 0.25, envMapIntensity: 2.5 });
+const matCopperCoil = new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.95, roughness: 0.18 });
+// スモークゴールド・フラッシュマウントキャノピー
+const matCanopy = new THREE.MeshPhysicalMaterial({
+    color: 0x050811, metalness: 0.95, roughness: 0.02, transparent: true, opacity: 0.85,
+    reflectivity: 0.95, clearcoat: 1.0, envMapIntensity: 3.0
+});
+const matCryoPipe = new THREE.MeshStandardMaterial({ color: 0xcfd8dc, roughness: 0.5, metalness: 0.35 });
 
 // =========================================================================
-// 4. 超精密宇宙船
+// 4. 実写映画仕様ステルス・ウェッジ宇宙船（チャイン多面体構造）
 // =========================================================================
 const radAngle = THREE.MathUtils.degToRad(cfg.env.angle_deg);
 const shipRoot = new THREE.Group();
@@ -975,14 +1024,13 @@ shipPitchGroup.add(shipMeshGroup);
 // 内部骨格・極低温配管
 const innerSkeletonGroup = new THREE.Group();
 shipMeshGroup.add(innerSkeletonGroup);
-innerSkeletonGroup.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 28.0), matTitaniumFrame));
+innerSkeletonGroup.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 28.0), matTitaniumFrame));
 
 for (let s of [-1, 1]) {
     const pipePts = [new THREE.Vector3(s * 1.5, -0.4, 12.0), new THREE.Vector3(s * 2.2, -0.2, 4.0), new THREE.Vector3(s * 2.8, -0.3, -4.0), new THREE.Vector3(s * 0.9, 0.0, -15.0)];
     innerSkeletonGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pipePts), 32, 0.16, 10, false), matCryoPipe));
 }
 
-// 艦種別造形
 if (cfg.style === "magnetic_fusion") {
     for (let z of [-8.5, -3.5]) {
         for (let a = 0; a < 4; a++) {
@@ -994,13 +1042,13 @@ if (cfg.style === "magnetic_fusion") {
     }
 }
 
-// 可変ペイロードベイ扉＆油圧シリンダー
+// 可変ペイロードベイ扉
 const bayDoors = [];
 for (let s of [-1, 1]) {
     const doorPivot = new THREE.Group();
     doorPivot.position.set(s * 2.4, 1.15, -2.5);
     shipMeshGroup.add(doorPivot);
-    const dPanel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.25, 12.0), matHull);
+    const dPanel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 12.0), matHull);
     dPanel.position.set(-s * 1.1, 0, 0);
     doorPivot.add(dPanel);
     bayDoors.push({ pivot: doorPivot, side: s });
@@ -1014,44 +1062,39 @@ for (let s of [-1, 1]) {
     shipMeshGroup.add(cyl);
 }
 
-// 主翼＆可動エレボン
+// シャープなチャイン・主翼
 const halfSpan = cfg.wings_span * 0.5;
 const wingPivots = [];
 const elevonMeshes = [];
 for (let s of [-1, 1]) {
     const pivot = new THREE.Group();
-    pivot.position.set(s * 3.2, -0.1, 1.5);
+    pivot.position.set(s * 3.2, -0.05, 1.5);
     shipMeshGroup.add(pivot);
 
     const wShape = new THREE.Shape();
-    wShape.moveTo(0, 4.0);
-    wShape.lineTo(s * (halfSpan - 3.2), -3.5);
-    wShape.lineTo(s * (halfSpan - 3.6), -7.5);
+    wShape.moveTo(0, 5.0);
+    wShape.lineTo(s * (halfSpan - 3.2), -3.0);
+    wShape.lineTo(s * (halfSpan - 3.5), -7.0);
     wShape.lineTo(0, -10.5);
     wShape.closePath();
 
-    const wMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wShape, { depth: 0.32, bevelThickness: 0.12, bevelSize: 0.4 }), matHull);
+    const wMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wShape, { depth: 0.28, bevelThickness: 0.08, bevelSize: 0.25 }), matHull);
     wMesh.rotation.x = Math.PI / 2;
     wMesh.castShadow = true;
     pivot.add(wMesh);
     wingPivots.push({ group: pivot, side: s });
 
-    const elMesh = new THREE.Mesh(new THREE.BoxGeometry(halfSpan * 0.45, 0.18, 1.6), matDarkAlloy);
-    elMesh.position.set(s * (halfSpan * 0.55), 0, -8.6);
+    const elMesh = new THREE.Mesh(new THREE.BoxGeometry(halfSpan * 0.45, 0.16, 1.5), matDarkAlloy);
+    elMesh.position.set(s * (halfSpan * 0.55), 0, -8.4);
     pivot.add(elMesh);
     elevonMeshes.push({ mesh: elMesh, side: s });
-
-    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 5.0, 12), matTitaniumFrame);
-    pod.rotation.x = Math.PI / 2;
-    pod.position.set(s * (halfSpan * 0.4), -0.2, -4.0);
-    pivot.add(pod);
 }
 
 // 背面スピードエアブレーキ
 const speedbrakePivot = new THREE.Group();
-speedbrakePivot.position.set(0, 1.35, -5.0);
+speedbrakePivot.position.set(0, 1.25, -5.0);
 shipMeshGroup.add(speedbrakePivot);
-const speedbrakeMesh = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.18, 4.2), matTitaniumFrame);
+const speedbrakeMesh = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.16, 4.2), matTitaniumFrame);
 speedbrakeMesh.position.set(0, 0, -2.1);
 speedbrakePivot.add(speedbrakeMesh);
 
@@ -1071,17 +1114,17 @@ const landingGears = [];
     landingGears.push(gPivot);
 });
 
-// タイヤ接地白煙
-const smokePuffs = [];
-const smokeGeo = new THREE.SphereGeometry(1.2, 8, 8);
+// タイヤ白煙（左右ギア外側に逃がし機体を隠さない）
+const smokePuffsLeft = [];
+const smokePuffsRight = [];
+const smokeGeo = new THREE.SphereGeometry(0.85, 8, 8);
 const smokeMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.0 });
-for (let sm = 0; sm < 8; sm++) {
-    const p = new THREE.Mesh(smokeGeo, smokeMat);
-    shipMeshGroup.add(p);
-    smokePuffs.push(p);
+for (let sm = 0; sm < 6; sm++) {
+    const pl = new THREE.Mesh(smokeGeo, smokeMat); shipMeshGroup.add(pl); smokePuffsLeft.push(pl);
+    const pr = new THREE.Mesh(smokeGeo, smokeMat); shipMeshGroup.add(pr); smokePuffsRight.push(pr);
 }
 
-// 十字型ドラッグシュート
+// ドラッグシュート
 const chuteGroup = new THREE.Group();
 chuteGroup.position.set(0, 0.8, -16.5);
 chuteGroup.scale.set(0.001, 0.001, 0.001);
@@ -1089,7 +1132,7 @@ shipMeshGroup.add(chuteGroup);
 
 const chuteCanopy = new THREE.Mesh(
     new THREE.ConeGeometry(4.8, 6.0, 12, 1, true),
-    new THREE.MeshStandardMaterial({ color: 0xf59e0b, side: THREE.DoubleSide, roughness: 0.7 })
+    new THREE.MeshStandardMaterial({ color: 0xd97706, side: THREE.DoubleSide, roughness: 0.6 })
 );
 chuteCanopy.rotation.x = -Math.PI / 2;
 chuteCanopy.position.z = -18.0;
@@ -1101,7 +1144,7 @@ for (let cLine = 0; cLine < 4; cLine++) {
     chuteGroup.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0xffffff })));
 }
 
-// 24枚二重アイリス可変ノズル
+// 24枚アイリスノズル
 const nozzleGimbalRoot = new THREE.Group();
 nozzleGimbalRoot.position.set(0, 0, -14.2);
 shipMeshGroup.add(nozzleGimbalRoot);
@@ -1110,25 +1153,25 @@ const irisPaddles = [];
 for (let i = 0; i < 24; i++) {
     const ang = (i / 24) * Math.PI * 2;
     const pPivot = new THREE.Group();
-    pPivot.position.set(Math.cos(ang) * 2.4, Math.sin(ang) * 2.4, -1.0);
+    pPivot.position.set(Math.cos(ang) * 2.3, Math.sin(ang) * 2.3, -1.0);
     pPivot.rotation.z = ang;
     nozzleGimbalRoot.add(pPivot);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 3.2), (i % 2 === 0) ? matTitaniumFrame : matDarkAlloy);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.08, 3.2), (i % 2 === 0) ? matTitaniumFrame : matDarkAlloy);
     blade.position.set(0, 0.05, -1.4);
     pPivot.add(blade);
     irisPaddles.push(pPivot);
 }
 
-// ロフト機体本体
-function createLoftedChassisGeometry() {
+// 実写ステルス多面体チャイン・ボディ造形
+function createStealthChassisGeometry() {
     const sections = [
-        { z: 18.0, w: 0.1, hTop: 0.1, hBtm: 0.1, yOff: 0.0 },
-        { z: 14.0, w: 1.8, hTop: 0.7, hBtm: 0.4, yOff: 0.1 },
-        { z: 9.0,  w: 3.8, hTop: 1.3, hBtm: 0.8, yOff: 0.25 },
-        { z: 4.0,  w: 4.8, hTop: 1.5, hBtm: 1.0, yOff: 0.2 },
-        { z: -2.0, w: 5.4, hTop: 1.6, hBtm: 1.1, yOff: 0.1 },
-        { z: -8.0, w: 5.2, hTop: 1.5, hBtm: 1.2, yOff: 0.0 },
-        { z: -14.0,w: 4.2, hTop: 1.3, hBtm: 1.2, yOff: -0.1 }
+        { z: 18.0, w: 0.2, hTop: 0.1, hBtm: 0.1, yOff: 0.0 },
+        { z: 14.0, w: 1.8, hTop: 0.65, hBtm: 0.35, yOff: 0.08 },
+        { z: 9.0,  w: 3.8, hTop: 1.25, hBtm: 0.75, yOff: 0.2 },
+        { z: 4.0,  w: 4.8, hTop: 1.45, hBtm: 0.95, yOff: 0.15 },
+        { z: -2.0, w: 5.4, hTop: 1.55, hBtm: 1.05, yOff: 0.08 },
+        { z: -8.0, w: 5.2, hTop: 1.45, hBtm: 1.15, yOff: 0.0 },
+        { z: -14.0,w: 4.2, hTop: 1.25, hBtm: 1.15, yOff: -0.08 }
     ];
     const radialSegs = 24, zSegs = sections.length;
     const geo = new THREE.BufferGeometry(), pos = [], uvs = [], indices = [];
@@ -1136,7 +1179,8 @@ function createLoftedChassisGeometry() {
         const sec = sections[j];
         for (let i = 0; i <= radialSegs; i++) {
             const theta = (i / radialSegs) * Math.PI * 2;
-            pos.push(Math.cos(theta) * (sec.w * 0.5), sec.yOff + Math.sin(theta) * (Math.sin(theta) >= 0 ? sec.hTop : sec.hBtm), sec.z);
+            const chineX = Math.sign(Math.cos(theta)) * Math.pow(Math.abs(Math.cos(theta)), 0.85);
+            pos.push(chineX * (sec.w * 0.5), sec.yOff + Math.sin(theta) * (Math.sin(theta) >= 0 ? sec.hTop : sec.hBtm), sec.z);
             uvs.push(i / radialSegs, j / (zSegs - 1));
         }
     }
@@ -1152,20 +1196,26 @@ function createLoftedChassisGeometry() {
     geo.computeVertexNormals();
     return geo;
 }
-const loftGeo = createLoftedChassisGeometry();
+const loftGeo = createStealthChassisGeometry();
 shipMeshGroup.add(new THREE.Mesh(loftGeo, matHull));
 const bellyMesh = new THREE.Mesh(loftGeo, matBellyTile);
 bellyMesh.scale.set(0.985, 0.98, 0.995);
-bellyMesh.position.y = -0.06;
+bellyMesh.position.y = -0.05;
 shipMeshGroup.add(bellyMesh);
 
-const canopyGlass = new THREE.Mesh(new THREE.ConeGeometry(1.35, 7.5, 16), matCanopy);
-canopyGlass.scale.set(1.0, 0.48, 1.6);
-canopyGlass.rotation.x = Math.PI / 2;
-canopyGlass.position.set(0, 0.95, 8.8);
+// フラッシュマウント・多面体キャノピー
+const canopyGeo = new THREE.BufferGeometry();
+const cVerts = new Float32Array([
+    0, 1.45, 12.0,   -0.85, 0.95, 7.5,   0.85, 0.95, 7.5,
+    0, 1.45, 12.0,    0.85, 0.95, 7.5,   0.0, 1.35, 6.0,
+    0, 1.45, 12.0,    0.0, 1.35, 6.0,   -0.85, 0.95, 7.5
+]);
+canopyGeo.setAttribute('position', new THREE.BufferAttribute(cVerts, 3));
+canopyGeo.computeVertexNormals();
+const canopyGlass = new THREE.Mesh(canopyGeo, matCanopy);
 shipMeshGroup.add(canopyGlass);
 
-// アルクビエレ・ワープリング（初期は機体内に完全格納）
+// アルクビエレ・ワープリング
 const warpRingAssembly = new THREE.Group();
 warpRingAssembly.position.set(0, 0.0, -2.5);
 warpRingAssembly.scale.set(0.001, 0.001, 0.001);
@@ -1191,16 +1241,16 @@ for (let i = 0; i < 16; i++) {
 }
 rotorCounter.add(new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.18, 12, 48), matCopperCoil));
 
-// 【超魔改造①】音速突破ベイパーコーン＆熱圏プラズマボウショック
-const vaporConeGeo = new THREE.ConeGeometry(8.0, 14.0, 32, 1, true);
+// ベイパーコーン＆ボウショック
+const vaporConeGeo = new THREE.ConeGeometry(7.5, 13.0, 32, 1, true);
 const vaporConeMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.0, side: THREE.DoubleSide });
 const vaporConeMesh = new THREE.Mesh(vaporConeGeo, vaporConeMat);
 vaporConeMesh.rotation.x = -Math.PI / 2;
 vaporConeMesh.position.set(0, 0, -1.0);
 shipMeshGroup.add(vaporConeMesh);
 
-const bowShockGeo = new THREE.SphereGeometry(4.2, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
-const bowShockMat = new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+const bowShockGeo = new THREE.SphereGeometry(3.8, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+const bowShockMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
 const bowShockMesh = new THREE.Mesh(bowShockGeo, bowShockMat);
 bowShockMesh.rotation.x = -Math.PI / 2;
 bowShockMesh.position.set(0, 0, 16.5);
@@ -1216,7 +1266,7 @@ const shieldMat = new THREE.ShaderMaterial({
 const hexShieldMesh = new THREE.Mesh(new THREE.SphereGeometry(18.0, 32, 32), shieldMat);
 shipMeshGroup.add(hexShieldMesh);
 
-// 推進炎＆ショックダイヤモンド
+// 推進炎＆ショックダイヤモンド（大気圧膨張連動）
 const plumeRoot = new THREE.Group();
 plumeRoot.position.set(0, 0, -2.3);
 nozzleGimbalRoot.add(plumeRoot);
@@ -1257,7 +1307,7 @@ for (let r = 0; r < 12; r++) {
     for (let z = -280; z <= 280; z += 14) {
         rPts.push(new THREE.Vector3(Math.cos((z * 0.04) + baseOffset) * 22.0, Math.sin((z * 0.04) + baseOffset) * 22.0, z));
     }
-    warpGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rPts), 64, 0.55, 8, false), new THREE.MeshBasicMaterial({ color: (r % 2 === 0) ? cfg.aurora_hex : 0x38bdf8, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending })));
+    warpGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rPts), 64, 0.55, 8, false), new THREE.MeshBasicMaterial({ color: (r % 2 === 0) ? cfg.aurora_hex : 0x38bdf8, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending, fog: false })));
 }
 
 const starCount = 3500;
@@ -1273,7 +1323,7 @@ for (let i = 0; i < starCount; i++) {
 }
 starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
 starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
-warpGroup.add(new THREE.LineSegments(starGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending })));
+warpGroup.add(new THREE.LineSegments(starGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, fog: false })));
 
 const dustCount = 800;
 const dustGeo = new THREE.BufferGeometry();
@@ -1284,10 +1334,10 @@ for (let i = 0; i < dustCount; i++) {
     dustPos[i * 6 + 3] = rx; dustPos[i * 6 + 4] = ry; dustPos[i * 6 + 5] = rz - 3.0;
 }
 dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-scene.add(new THREE.LineSegments(dustGeo, new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending })));
+scene.add(new THREE.LineSegments(dustGeo, new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, fog: false })));
 
 // =========================================================================
-// 6. 相模湾メガフロート射場＆Gerstner波浪海面＆地球（座標・埋まり修正）
+// 6. 相模湾メガフロート射場＆Gerstner波浪海面＆実写NASA地球
 // =========================================================================
 const catapultSlopeRoot = new THREE.Group();
 catapultSlopeRoot.rotation.x = -radAngle;
@@ -1296,17 +1346,17 @@ scene.add(catapultSlopeRoot);
 const railMover = new THREE.Group();
 catapultSlopeRoot.add(railMover);
 
-// カタパルトレール主桁（Y座標を-4.8に下げて埋まりを根絶）
-const mainGirder = new THREE.Mesh(new THREE.BoxGeometry(14.5, 2.4, 3600), matDarkAlloy);
-mainGirder.position.set(0, -4.8, 1750);
+// カタパルトレール主桁（z=0から前方にのみ伸ばし機体後方・視線を完全にクリア）
+const mainGirder = new THREE.Mesh(new THREE.BoxGeometry(12.0, 1.5, 3600), matDarkAlloy);
+mainGirder.position.set(0, -3.5, 1800);
 mainGirder.receiveShadow = true;
 railMover.add(mainGirder);
 
-// 220連カタパルトアーチ
+// カタパルトアーチ（機体より前方 z >= 25 のみに配置し見切れ解消）
 const dummyArch = new THREE.Object3D();
-const archInst = new THREE.InstancedMesh(new THREE.TorusGeometry(9.5, 0.45, 10, 24, Math.PI), matTitaniumFrame, 220);
-for (let i = 0; i < 220; i++) {
-    dummyArch.position.set(0, -3.2, i * 16.0 - 40.0); dummyArch.updateMatrix(); archInst.setMatrixAt(i, dummyArch.matrix);
+const archInst = new THREE.InstancedMesh(new THREE.TorusGeometry(8.5, 0.35, 10, 24, Math.PI), matTitaniumFrame, 180);
+for (let i = 0; i < 180; i++) {
+    dummyArch.position.set(0, -2.6, i * 20.0 + 25.0); dummyArch.updateMatrix(); archInst.setMatrixAt(i, dummyArch.matrix);
 }
 railMover.add(archInst);
 
@@ -1342,7 +1392,7 @@ const oceanShaderMat = new THREE.ShaderMaterial({
             float micro = sin(vUv.x * 2.5 + uTime * 2.0) * cos(vUv.y * 2.5 - uTime * 1.5) * 0.08;
             vec3 n = normalize(vNormal + vec3(micro, 0.0, micro));
             float fresnel = pow(1.0 - max(0.0, dot(n, viewDir)), 4.0);
-            vec3 deepWater = vec3(0.015, 0.045, 0.095); vec3 skyReflect = vec3(0.35, 0.65, 0.98);
+            vec3 deepWater = vec3(0.012, 0.038, 0.082); vec3 skyReflect = vec3(0.35, 0.65, 0.98);
             vec3 halfVec = normalize(uSunDir + viewDir); float spec = pow(max(0.0, dot(n, halfVec)), 160.0) * 4.5;
             gl_FragColor = vec4(mix(deepWater, skyReflect, fresnel) + uSunColor * spec, uOpacity);
         }
@@ -1355,27 +1405,27 @@ const oceanShaderMat = new THREE.ShaderMaterial({
     },
     transparent: true
 });
-const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(280000, 280000, 96, 96), oceanShaderMat);
+const seaMesh = new THREE.Mesh(new THREE.PlaneGeometry(350000, 350000, 96, 96), oceanShaderMat);
 seaMesh.rotation.x = -Math.PI / 2;
 seaMesh.position.y = -45.0;
 groundEnvMover.add(seaMesh);
 
 const islandBase = new THREE.Mesh(new THREE.BoxGeometry(220, 28, 3800), matDarkAlloy);
-islandBase.position.set(0, -32, 1750);
+islandBase.position.set(0, -42, 1800);
 islandBase.receiveShadow = true;
 groundEnvMover.add(islandBase);
 
 const craneMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.85, roughness: 0.25 });
 for (let cr = 0; cr < 8; cr++) {
-    const s = (cr % 2 === 0) ? 1 : -1; const cz = cr * 380.0 + 100.0;
+    const s = (cr % 2 === 0) ? 1 : -1; const cz = cr * 380.0 + 150.0;
     const cTower = new THREE.Mesh(new THREE.BoxGeometry(4.0, 95.0, 4.0), craneMat);
     cTower.position.set(s * 75.0, 25.0, cz); groundEnvMover.add(cTower);
     const cArm = new THREE.Mesh(new THREE.BoxGeometry(32.0, 3.5, 4.0), craneMat);
     cArm.position.set(s * 62.0, 72.0, cz); groundEnvMover.add(cArm);
 }
 
-const fujiMount = new THREE.Mesh(new THREE.ConeGeometry(12500, 3776, 64), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 }));
-fujiMount.position.set(4500, 1800, 14500);
+const fujiMount = new THREE.Mesh(new THREE.ConeGeometry(12500, 3776, 64), new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 }));
+fujiMount.position.set(5500, 1800, 16500);
 groundEnvMover.add(fujiMount);
 
 const beamGeo = new THREE.CylinderGeometry(0.5, 32.0, 750, 16, 1, true);
@@ -1388,139 +1438,144 @@ for (let b = 0; b < 8; b++) {
     groundEnvMover.add(beam);
 }
 
+// 散水煙（ノズル後方にのみ小径球体を配置し機体見切れを完全解消）
 const delugePuffs = [];
 const delugeMat = new THREE.MeshBasicMaterial({ color: 0xdbeafe, transparent: true, opacity: 0.0 });
-for (let p = 0; p < 16; p++) {
-    const puff = new THREE.Mesh(new THREE.SphereGeometry(18.0, 12, 12), delugeMat);
-    puff.position.set((Math.random() - 0.5) * 60, -2.0, (Math.random() - 0.5) * 80 - 20);
+for (let p = 0; p < 8; p++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(3.5, 12, 12), delugeMat);
+    puff.position.set((Math.random() - 0.5) * 12.0, -4.5, -16.0 - p * 6.0);
     groundEnvMover.add(puff);
     delugePuffs.push(puff);
 }
 
-// 5オクターブFBMフォトリアル地球
-const earthShaderMat = new THREE.ShaderMaterial({
-    vertexShader: `
-        varying vec3 vNormal; varying vec3 vWorldPos;
-        void main() { vNormal = normalize(normalMatrix * normal); vec4 wp = modelMatrix * vec4(position, 1.0); vWorldPos = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }
-    `,
-    fragmentShader: `
-        varying vec3 vNormal; varying vec3 vWorldPos; uniform vec3 uSunDir; uniform float uOpacity;
-        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
-        float smoothNoise(vec2 p) {
-            vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
-            return mix(mix(hash(i + vec2(0.0,0.0)), hash(i + vec2(1.0,0.0)), u.x), mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x), u.y);
-        }
-        float fbm(vec2 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 5; i++) { v += a * smoothNoise(p); p *= 2.0; a *= 0.5; } return v; }
-        void main() {
-            vec3 norm = normalize(vNormal); vec3 viewDir = normalize(cameraPosition - vWorldPos); float light = dot(norm, uSunDir);
-            vec2 sphereUv = vec2(atan(norm.z, norm.x) * 0.159 + 0.5, asin(norm.y) * 0.318 + 0.5);
-            float land = smoothstep(0.48, 0.54, fbm(sphereUv * 8.0));
-            vec3 oceanCol = vec3(0.012, 0.045, 0.12); vec3 landCol = vec3(0.07, 0.13, 0.08);
-            vec3 dayCol = mix(oceanCol, landCol, land);
-            float clouds = smoothstep(0.45, 0.75, fbm(sphereUv * 16.0 + vec2(0.1, 0.0)));
-            dayCol = mix(dayCol, vec3(0.92, 0.95, 1.0), clouds * 0.65);
-            float cityLights = pow(smoothNoise(sphereUv * 32.0), 3.0) * land * 14.0;
-            vec3 nightCol = vec3(1.0, 0.75, 0.3) * cityLights;
-            vec3 baseCol = mix(nightCol, dayCol * max(0.08, light), smoothstep(-0.15, 0.25, light));
-            float rim = pow(1.0 - max(0.0, dot(norm, viewDir)), 3.0);
-            gl_FragColor = vec4(baseCol + vec3(0.25, 0.65, 1.0) * rim * 1.8, uOpacity);
-        }
-    `,
-    uniforms: {
-        uSunDir: { value: new THREE.Vector3().fromArray(cfg.env.sun_pos).normalize() },
-        uOpacity: { value: 1.0 }
-    },
-    transparent: true
-});
+// 実写NASA Blue Marble テクスチャによる本物の地球
 const earthGroup = new THREE.Group();
-earthGroup.visible = false;
+earthGroup.position.set(0, -60045, 15000);
 scene.add(earthGroup);
-earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(25000, 64, 64), earthShaderMat));
+
+const realEarthMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(60000, 64, 64),
+    new THREE.MeshStandardMaterial({
+        map: earthDayTex,
+        roughness: 0.75,
+        metalness: 0.1
+    })
+);
+earthGroup.add(realEarthMesh);
+
+const realCloudsMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(60250, 64, 64),
+    new THREE.MeshStandardMaterial({
+        map: earthCloudsTex,
+        transparent: true,
+        opacity: 0.75,
+        blending: THREE.AdditiveBlending
+    })
+);
+earthGroup.add(realCloudsMesh);
+
+// 宇宙空間用大気リムグロー
+const atmoGlowMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(60800, 64, 64),
+    new THREE.ShaderMaterial({
+        vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+        fragmentShader: `varying vec3 vNormal; void main() { float intensity = pow(0.7 - dot(vNormal, vec3(0, 0, 1.0)), 2.5); gl_FragColor = vec4(0.28, 0.65, 1.0, 1.0) * intensity; }`,
+        side: THREE.BackSide, blending: THREE.AdditiveBlending, transparent: true
+    })
+);
+earthGroup.add(atmoGlowMesh);
 
 // =========================================================================
-// 7. 目標惑星＆滑走路システム（平坦化・高度連動・ラビットライト）
+// 7. 実写クレーター地表・巨大未来都市コロニー・16km無限滑走路
 // =========================================================================
 const destWorld = new THREE.Group();
 destWorld.visible = false;
 scene.add(destWorld);
 
-// 目標惑星本体＆巨大リング
-const destPlanet = new THREE.Mesh(new THREE.SphereGeometry(3200, 64, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(cfg.dest_color), roughness: 0.7 }));
-destPlanet.position.set(0, -3200, 0);
+// 目標惑星本体（実写真・非発光低反射PBR）
+const destPlanet = new THREE.Mesh(
+    new THREE.SphereGeometry(4500, 64, 64),
+    new THREE.MeshStandardMaterial({
+        map: moonCraterTex,
+        color: new THREE.Color(cfg.dest_color),
+        roughness: 0.9,
+        metalness: 0.1
+    })
+);
+destPlanet.position.set(0, -4500, 0);
 destWorld.add(destPlanet);
 
 if (cfg.dest_type === "saturn") {
-    const ringGeo = new THREE.RingGeometry(3800, 6200, 64);
-    const ringMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(cfg.dest_band), side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+    const ringGeo = new THREE.RingGeometry(5200, 8500, 64);
+    const ringMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(cfg.dest_band), side: THREE.DoubleSide, transparent: true, opacity: 0.75 });
     const planetRing = new THREE.Mesh(ringGeo, ringMat);
     planetRing.rotation.x = Math.PI / 2.3;
     planetRing.position.copy(destPlanet.position);
     destWorld.add(planetRing);
 }
 
-// 目標惑星の地表山岳地形（滑走路周辺 |tx| < 1200 を完全に平坦化）
-const terrainGeo = new THREE.PlaneGeometry(80000, 80000, 64, 64);
+// 実写クレーターバンプ付き山岳地形（滑走路周辺 |tx| < 1400 は完全フラット）
+const terrainGeo = new THREE.PlaneGeometry(90000, 90000, 64, 64);
 const terrainPos = terrainGeo.attributes.position.array;
 for (let i = 0; i < terrainPos.length; i += 3) {
     const tx = terrainPos[i], ty = terrainPos[i+1];
-    const rawElevation = Math.sin(tx * 0.001) * Math.cos(ty * 0.001) * 350.0 + Math.sin(tx * 0.003) * 80.0;
-    const flatFactor = THREE.MathUtils.clamp((Math.abs(tx) - 400.0) / 800.0, 0.0, 1.0);
+    const rawElevation = Math.sin(tx * 0.001) * Math.cos(ty * 0.001) * 320.0 + Math.sin(tx * 0.003) * 70.0;
+    const flatFactor = THREE.MathUtils.clamp((Math.abs(tx) - 400.0) / 1000.0, 0.0, 1.0);
     terrainPos[i+2] = rawElevation * flatFactor;
 }
 terrainGeo.computeVertexNormals();
-const terrainMesh = new THREE.Mesh(terrainGeo, new THREE.MeshStandardMaterial({ color: new THREE.Color(cfg.dest_band), roughness: 0.95 }));
+const terrainMesh = new THREE.Mesh(terrainGeo, new THREE.MeshStandardMaterial({
+    map: moonCraterTex,
+    color: new THREE.Color(cfg.dest_band),
+    roughness: 0.95,
+    metalness: 0.1
+}));
 terrainMesh.rotation.x = -Math.PI / 2;
 terrainMesh.position.y = -3.2;
 destWorld.add(terrainMesh);
 
-// 高速スクロール滑走路ルート
+// 16,000m 無限滑走路＆未来都市コロニー
 const runwayScrollGroup = new THREE.Group();
 destWorld.add(runwayScrollGroup);
 
-const runwayMesh = new THREE.Mesh(new THREE.BoxGeometry(60.0, 0.4, 3500.0), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 }));
-runwayMesh.position.set(0, -3.0, 0);
+const runwayMesh = new THREE.Mesh(new THREE.BoxGeometry(70.0, 0.4, 16000.0), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.85 }));
+runwayMesh.position.set(0, -3.0, 6000.0);
 runwayMesh.receiveShadow = true;
 runwayScrollGroup.add(runwayMesh);
 
-const centerLineMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 3400.0), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+const centerLineMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 15800.0), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
 centerLineMesh.rotation.x = -Math.PI / 2;
-centerLineMesh.position.set(0, -2.78, 0);
+centerLineMesh.position.set(0, -2.78, 6000.0);
 runwayScrollGroup.add(centerLineMesh);
 
-for (let hg = 0; hg < 12; hg++) {
-    const gateZ = -1600.0 + hg * 280.0;
-    const hgMesh = new THREE.Mesh(
-        new THREE.RingGeometry(28.0, 29.5, 4),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, side: THREE.DoubleSide })
-    );
-    hgMesh.position.set(0, 16.0, gateZ);
-    runwayScrollGroup.add(hgMesh);
+// 滑走路両脇の未来都市コロニー＆発光管制塔（滑走路上には絶対出ない |x| > 120m）
+const colonyTowerMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.25 });
+for (let b = 0; b < 24; b++) {
+    const s = (b % 2 === 0) ? -1 : 1;
+    const bz = -1800.0 + b * 550.0;
+    const bHeight = 80.0 + (b % 4) * 45.0;
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(35.0, bHeight, 45.0), colonyTowerMat);
+    tower.position.set(s * 150.0, bHeight * 0.5 - 3.0, bz);
+    runwayScrollGroup.add(tower);
+
+    // 窓明かりエミッシブライン
+    const windowStrip = new THREE.Mesh(new THREE.BoxGeometry(35.4, 1.5, 45.4), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    windowStrip.position.set(s * 150.0, bHeight * 0.7 - 3.0, bz);
+    runwayScrollGroup.add(windowStrip);
 }
 
-const baseFacilityMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.2 });
-for (let d = 0; d < 8; d++) {
-    const s = (d % 2 === 0) ? -1 : 1;
-    const dz = -1400.0 + d * 350.0;
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(35.0, 16, 16, 0, Math.PI*2, 0, Math.PI*0.5), baseFacilityMat);
-    dome.position.set(s * 85.0, -3.0, dz);
-    runwayScrollGroup.add(dome);
-}
-const controlTower = new THREE.Mesh(new THREE.CylinderGeometry(8.0, 14.0, 110.0, 16), baseFacilityMat);
-controlTower.position.set(95.0, 52.0, -200.0);
-runwayScrollGroup.add(controlTower);
-
-// 進入誘導灯＆超魔改造⑤ ラビットライト（高速シーケンシャルストロボ球）
+// 誘導灯＆ラビットライト
 const dummyLight = new THREE.Object3D();
-const approachLightsInst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.6, 8, 8), new THREE.MeshBasicMaterial({ color: 0x10b981 }), 120);
-for (let al = 0; al < 60; al++) {
-    const lz = -1750.0 - al * 25.0;
-    dummyLight.position.set(-28.0, -2.6, lz); dummyLight.updateMatrix(); approachLightsInst.setMatrixAt(al * 2, dummyLight.matrix);
-    dummyLight.position.set(28.0, -2.6, lz); dummyLight.updateMatrix(); approachLightsInst.setMatrixAt(al * 2 + 1, dummyLight.matrix);
+const approachLightsInst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.65, 8, 8), new THREE.MeshBasicMaterial({ color: 0x10b981 }), 160);
+for (let al = 0; al < 80; al++) {
+    const lz = -2200.0 - al * 30.0;
+    dummyLight.position.set(-32.0, -2.6, lz); dummyLight.updateMatrix(); approachLightsInst.setMatrixAt(al * 2, dummyLight.matrix);
+    dummyLight.position.set(32.0, -2.6, lz); dummyLight.updateMatrix(); approachLightsInst.setMatrixAt(al * 2 + 1, dummyLight.matrix);
 }
 runwayScrollGroup.add(approachLightsInst);
 
-const rabbitStrobeMesh = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffffff, blending: THREE.AdditiveBlending }));
-rabbitStrobeMesh.position.set(0, -2.2, -1750.0);
+const rabbitStrobeMesh = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffffff, blending: THREE.AdditiveBlending }));
+rabbitStrobeMesh.position.set(0, -2.2, -2200.0);
 runwayScrollGroup.add(rabbitStrobeMesh);
 
 // =========================================================================
@@ -1582,7 +1637,7 @@ function drawRadar(prog, vc, mach, altKm) {
 }
 
 // =========================================================================
-// 10. 60fps アニメーションループ（全修正＆超魔改造演出完全連動）
+// 10. 60fps アニメーションループ（全修正＆物理光学シネマ制御）
 // =========================================================================
 const cameraIdealPos = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
@@ -1651,54 +1706,63 @@ function animate(now) {
         announcedAltitudes = {};
     }
 
-    // 大気圏スカイドーム・大気光クロスフェード
+    // 宇宙空間でフォグ消滅
     const spaceFade = THREE.MathUtils.clamp((altKm - 15.0) / 65.0, 0.0, 1.0);
     atmoSkyMat.uniforms.uSpaceFade.value = spaceFade;
     spaceFieldGroup.visible = (spaceFade > 0.05);
+    scene.fog.density = cfg.env.fog_density * (1.0 - spaceFade);
 
-    // 【修正①】機体ピッチ角制御（発射時はレール傾斜角、離陸後は滑らかなピッチアップ）
+    // 実写地球の自転＆雲アニメーション
+    realEarthMesh.rotation.y = now * 0.00008;
+    realCloudsMesh.rotation.y = now * 0.00012;
+
+    // 航空力学ピッチ姿勢制御
     shipPitchGroup.rotation.set(-THREE.MathUtils.degToRad(pitchDeg), THREE.MathUtils.degToRad(yawDeg), THREE.MathUtils.degToRad(rollDeg));
 
-    // 【超魔改造⑤】タッチダウン時のサスペンション接地バウンド
+    // 高周波空力カメラシェイク
+    const aeroShake = (mach > 0.5 && altKm < 60.0) ? (Math.sin(now * 0.045) * 0.08 + Math.cos(now * 0.078) * 0.05) * vib : 0.0;
     let suspensionBounce = 0.0;
     if (f0.phase === "TOUCHDOWN_ROLLOUT_STOP") {
         const bouncePhase = ((currentTime - f0.t) / (dtFrame || 1.0)) * 5.0;
-        suspensionBounce = Math.sin(bouncePhase * Math.PI) * Math.exp(-bouncePhase * 0.8) * 0.18;
+        suspensionBounce = Math.sin(bouncePhase * Math.PI) * Math.exp(-bouncePhase * 0.8) * 0.16;
     }
     shipMeshGroup.position.set(
-        Math.sin(now * 0.003) * 0.25,
-        Math.cos(now * 0.004) * 0.18 - suspensionBounce,
-        Math.sin(now * 0.002) * 0.35
+        Math.sin(now * 0.003) * 0.18 + aeroShake,
+        Math.cos(now * 0.004) * 0.12 - suspensionBounce,
+        Math.sin(now * 0.002) * 0.25
     );
 
     shipMeshGroup.getWorldPosition(shipWorldPos);
 
-    // 【超魔改造④】ダイナミックFOV（画角呼吸）＆Gフォースカメララグ
-    let targetFov = 55.0;
+    // 大気圧連動プルーム膨張
+    const atmoPressureRatio = THREE.MathUtils.clamp(1.0 - (altKm / 75.0), 0.15, 1.0);
+    jetCylinder.scale.set(1.0 + (1.0 - atmoPressureRatio) * 1.8, 1.0 + (1.0 - atmoPressureRatio) * 1.8, 1.0);
+
+    // ダイナミックFOV
+    let targetFov = 52.0;
     if (f0.phase === "CATAPULT_RAIL_ACCEL" || f0.phase === "ALCUBIERRE_HYPER_WARP") {
-        targetFov = 55.0 + (gLoad / 10.0) * 25.0;
+        targetFov = 52.0 + (gLoad / 10.0) * 20.0;
     } else if (f0.phase === "DEBRIS_AERO_BRAKING" || f0.phase === "TOUCHDOWN_ROLLOUT_STOP") {
-        targetFov = 48.0;
+        targetFov = 46.0;
     }
     cameraMain.fov = THREE.MathUtils.lerp(cameraMain.fov, targetFov, 0.08);
     cameraMain.updateProjectionMatrix();
 
-    // 【超魔改造②】大気突入時のHUDグリッチ
-    if (pAlpha > 0.4) {
-        const glitchX = (Math.random() - 0.5) * pAlpha * 6.0;
-        const glitchY = (Math.random() - 0.5) * pAlpha * 6.0;
-        commsTextEl.style.transform = `translate(${glitchX}px, ${glitchY}px)`;
-        commsTextEl.style.textShadow = `${glitchX}px 0 #ef4444, -${glitchX}px 0 #38bdf8`;
-    } else {
-        commsTextEl.style.transform = "none";
-        commsTextEl.style.textShadow = "none";
-    }
-
-    // カメラ位置追従制御
+    // カメラ位置追従制御（着陸滑走時は機体が見えなくならないよう斜め前方に回り込み）
     if (!controls.enabled) {
-        if (activeCamMode === 0 || activeCamMode === 1) {
-            const camZLag = (gLoad > 3.0) ? (gLoad - 3.0) * 1.8 : 0.0;
-            cameraIdealPos.set(shipWorldPos.x + baseCamPos.x, shipWorldPos.y + baseCamPos.y, shipWorldPos.z + baseCamPos.z - (engPwr * 8.0) - camZLag);
+        if (activeCamMode === 0) {
+            if (f0.phase.includes("SECURED") || (f0.phase.includes("STOP") && runwaySpd < 40.0)) {
+                // 着陸成功シネマティック・パンニング
+                cameraIdealPos.set(shipWorldPos.x - 24.0, shipWorldPos.y + 4.5, shipWorldPos.z + 18.0);
+                cameraLookTarget.set(shipWorldPos.x, shipWorldPos.y + 1.2, shipWorldPos.z - 2.0);
+            } else {
+                cameraIdealPos.set(shipWorldPos.x + baseCamPos.x, shipWorldPos.y + baseCamPos.y, shipWorldPos.z + baseCamPos.z - (engPwr * 8.0));
+                cameraLookTarget.set(shipWorldPos.x, shipWorldPos.y + baseTarget.y, shipWorldPos.z + baseTarget.z);
+            }
+            cameraMain.position.lerp(cameraIdealPos, 0.05);
+            cameraMain.lookAt(cameraLookTarget);
+        } else if (activeCamMode === 1) {
+            cameraIdealPos.set(shipWorldPos.x + baseCamPos.x, shipWorldPos.y + baseCamPos.y, shipWorldPos.z + baseCamPos.z - (engPwr * 8.0));
             cameraLookTarget.set(shipWorldPos.x, shipWorldPos.y + baseTarget.y, shipWorldPos.z + baseTarget.z);
             cameraMain.position.lerp(cameraIdealPos, 0.05);
             cameraMain.lookAt(cameraLookTarget);
@@ -1716,7 +1780,7 @@ function animate(now) {
         controls.update();
     }
 
-    // 【修正①＆③】地球メガフロート＆海面（純粋な高度連動で斜め落下・隙間を解消）
+    // 地球メガフロート・海面連動
     if (prog === 0.0 && altKm < 110.0) {
         catapultSlopeRoot.visible = true;
         groundEnvMover.visible = true;
@@ -1731,25 +1795,23 @@ function animate(now) {
         groundEnvMover.visible = false;
     }
 
-    // 【修正③】地球球体の滑らかな出現＆ワープ遠ざかり
-    if (altKm >= 20.0 && prog < 0.30) {
+    // 実写地球の遠ざかり
+    if (altKm >= 20.0 && prog < 0.35) {
         earthGroup.visible = true;
-        const earthFade = THREE.MathUtils.clamp((altKm - 20.0) / 25.0, 0.0, 1.0);
-        earthShaderMat.uniforms.uOpacity.value = earthFade;
         const warpRecede = Math.pow(Math.max(0, prog - 0.05) * 18.0, 3.0);
-        earthGroup.position.set(0, -25050 - altKm * 120.0 - warpRecede * 35000.0, -4000 - distM * 0.6 - warpRecede * 95000.0);
+        earthGroup.position.set(0, -60045 - altKm * 1000.0 - warpRecede * 35000.0, 15000 - distM * 0.6 - warpRecede * 95000.0);
     } else {
         earthGroup.visible = false;
     }
 
-    // 散水デリュージ煙
-    if (prog === 0.0 && altKm < 5.0 && cfg.cryo_steam) {
-        delugeMat.opacity = THREE.MathUtils.clamp(1.0 - (altKm / 4.0), 0.0, 0.45);
+    // 散水煙
+    if (prog === 0.0 && altKm < 4.0 && cfg.cryo_steam) {
+        delugeMat.opacity = THREE.MathUtils.clamp(1.0 - (altKm / 3.5), 0.0, 0.35);
     } else {
         delugeMat.opacity = 0.0;
     }
 
-    // 【修正②】アルクビエレ・ワープリング（ベイ開放連動格納）
+    // ワープリング格納
     if (ringL > 0.01) {
         warpRingAssembly.scale.setScalar(ringL);
         warpRingAssembly.position.y = THREE.MathUtils.lerp(0.0, -0.8, ringL);
@@ -1759,48 +1821,42 @@ function animate(now) {
         warpRingAssembly.scale.set(0.001, 0.001, 0.001);
     }
 
-    // ペイロードベイ開閉
     bayDoors.forEach(bd => {
         bd.pivot.rotation.z = -bd.side * bayO * 1.5;
     });
 
-    // 【超魔改造①】ベイパーコーン＆ボウショックの描画
+    // ベイパーコーン＆ボウショック
     if (cfg.mach_cone_vfx) {
         if (vaporA > 0.05) {
-            vaporConeMat.opacity = vaporA * 0.75;
-            vaporConeMesh.scale.set(1.0 + vaporA * 0.6, 1.0 + vaporA * 0.6, 1.0);
+            vaporConeMat.opacity = vaporA * 0.65;
+            vaporConeMesh.scale.set(1.0 + vaporA * 0.5, 1.0 + vaporA * 0.5, 1.0);
         } else {
             vaporConeMat.opacity = 0.0;
         }
 
         if (pAlpha > 0.05) {
-            bowShockMat.opacity = pAlpha * 0.85;
+            bowShockMat.opacity = pAlpha * 0.75;
             bowShockMesh.scale.set(1.0 + (1.0 - pAlpha) * 0.4, 1.0 + (1.0 - pAlpha) * 0.4, 1.0 + pAlpha * 0.5);
         } else {
             bowShockMat.opacity = 0.0;
         }
     }
 
-    // 可動動翼＆スピードブレーキ
     speedbrakePivot.rotation.x = speedbrake * 0.75;
-    elevonMeshes.forEach(em => { em.mesh.rotation.x = Math.sin(now * 0.005) * 0.15 + THREE.MathUtils.degToRad(-pitchDeg * 0.3); });
+    elevonMeshes.forEach(em => { em.mesh.rotation.x = Math.sin(now * 0.005) * 0.12 + THREE.MathUtils.degToRad(-pitchDeg * 0.25); });
     irisPaddles.forEach(ip => { ip.rotation.x = -0.35 + L('nozzle_open') * 0.48; });
 
-    // ランディングギア
     landingGears.forEach(lg => { lg.scale.setScalar(Math.max(0.001, gearD)); });
 
-    // タイヤ接地白煙
+    // 左右白煙
     if (tdSmoke > 0.05) {
-        smokeMat.opacity = tdSmoke * 0.85;
-        smokePuffs.forEach(p => {
-            p.position.set((Math.random() - 0.5) * 3.5, -2.6, -6.0 - Math.random() * 8.0);
-            p.scale.setScalar(1.0 + Math.random() * 2.0);
-        });
+        smokeMat.opacity = tdSmoke * 0.45;
+        smokePuffsLeft.forEach(p => { p.position.set(-4.5 - Math.random() * 2.0, -2.6, -6.0 - Math.random() * 6.0); });
+        smokePuffsRight.forEach(p => { p.position.set(4.5 + Math.random() * 2.0, -2.6, -6.0 - Math.random() * 6.0); });
     } else {
         smokeMat.opacity = 0.0;
     }
 
-    // ドラッグシュート開傘
     if (chuteD > 0.01) {
         chuteGroup.scale.setScalar(chuteD);
         chuteCanopy.rotation.z += 0.02;
@@ -1808,25 +1864,23 @@ function animate(now) {
         chuteGroup.scale.setScalar(0.001);
     }
 
-    // 【修正④】目標惑星＆滑走路システム（高度連動・平坦化滑走路へ完全着地）
+    // 目標惑星・緩やかな進入アプローチ＆無限滑走路スクロール
     if (prog > 0.75) {
         destWorld.visible = true;
-        // 地表を機体の高度（altKm * 1000m）分だけ正確に直下に配置
         const targetAltM = altKm * 1000.0;
         destWorld.position.y = -targetAltM;
 
         atmoSkyMat.uniforms.uHorizon.value.set(cfg.dest_band);
         atmoSkyMat.uniforms.uZenith.value.set(cfg.dest_color);
-        atmoSkyMat.uniforms.uSpaceFade.value = THREE.MathUtils.clamp((altKm - 1.5) / 100.0, 0.0, 1.0);
+        atmoSkyMat.uniforms.uSpaceFade.value = THREE.MathUtils.clamp((altKm - 1.8) / 90.0, 0.0, 1.0);
 
-        // ラビットライト（高速進入ストロボ）
-        const rabbitStep = Math.floor((now * 0.025) % 60);
-        rabbitStrobeMesh.position.z = -1750.0 - (59 - rabbitStep) * 25.0;
+        const rabbitStep = Math.floor((now * 0.025) % 80);
+        rabbitStrobeMesh.position.z = -2200.0 - (79 - rabbitStep) * 30.0;
 
-        // リアル地上滑走スクロール
+        // 飛行機通りの連続進入前進スクロール
         if (runwaySpd > 0.1 && isPlaying) {
             runwayAccumZ += runwaySpd * delta;
-            runwayScrollGroup.position.z = -(runwayAccumZ % 3400.0);
+            runwayScrollGroup.position.z = -(runwayAccumZ % 15000.0);
         }
     } else {
         destWorld.visible = false;
@@ -1834,7 +1888,7 @@ function animate(now) {
         atmoSkyMat.uniforms.uZenith.value.set(cfg.env.sky_zenith);
     }
 
-    // 3層パララックス・ワープ高速流動
+    // ワープ高速流動
     warpGroup.scale.setScalar(wAct > 0.05 ? 1.0 : 0.0001);
     if (wAct > 0.05) {
         warpGroup.rotation.z += 0.04;
@@ -1848,7 +1902,6 @@ function animate(now) {
         starGeo.attributes.position.needsUpdate = true;
     }
 
-    // 近景スペースダスト流動
     const speedRatio = THREE.MathUtils.clamp((mach / 30.0) + (vc * 8.0), 0.1, 14.0);
     const dArr = dustGeo.attributes.position.array;
     for (let i = 0; i < dustCount; i++) {
@@ -1858,18 +1911,17 @@ function animate(now) {
     }
     dustGeo.attributes.position.needsUpdate = true;
 
-    // ワープ時空歪曲
+    // ポストプロセス更新
     let duckingFactor = 1.0;
     if (f0.phase === "WARP_FIELD_COMPRESSION" && prog > 0.14) {
-        warpPass.uniforms.uInvert.value = 1.0;
+        filmPass.uniforms.uInvert.value = 1.0;
         duckingFactor = 0.001;
     } else {
-        warpPass.uniforms.uInvert.value = 0.0;
+        filmPass.uniforms.uInvert.value = 0.0;
     }
-    warpPass.uniforms.uDistort.value = wBoom * 2.8 + wAct * 0.35;
-    warpPass.uniforms.uTime.value = now * 0.001;
+    filmPass.uniforms.uDistort.value = wBoom * 2.8 + wAct * 0.35;
+    filmPass.uniforms.uTime.value = now * 0.001;
 
-    // 音声ボリューム調整
     if (actx) {
         rocketGain.gain.setTargetAtTime(engPwr * 0.35 * duckingFactor, actx.currentTime, 0.05);
         rcsGain.gain.setTargetAtTime(rcsBurst * 0.15 * duckingFactor, actx.currentTime, 0.05);
@@ -1877,7 +1929,6 @@ function animate(now) {
 
     drawRadar(prog, vc, mach, altKm);
 
-    // 単一画面高FPSレンダリング
     renderer.setViewport(0, 0, W, H);
     composerMain.render();
 
@@ -1893,7 +1944,6 @@ function animate(now) {
     document.getElementById('ui-gamma').innerText = gamma.toFixed(2);
     document.getElementById('ui-prog').innerText = (prog * 100).toFixed(1);
 
-    // 【修正⑤】滑走完全停止後（PLANETARY_RUNWAY_SECURED）に初めてコンプリートバナー表示
     if (f0.phase === "PLANETARY_RUNWAY_SECURED" && runwaySpd < 1.0) {
         completeBannerEl.style.display = 'block';
     } else {
